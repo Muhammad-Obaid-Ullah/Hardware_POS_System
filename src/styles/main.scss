@@ -1,0 +1,75 @@
+$color-primary: #14b8a6;
+$color-primary-dark: #0d9488;
+$color-primary-light: #2dd4bf;
+$color-accent: #a3f7d1;
+$color-bg: #f9fafb;
+$color-surface-light: #fafafa;
+$color-surface: #ffffff;
+$color-gray-100: #f3f4f6;
+$color-gray-200: #e5e7eb;
+$color-gray-300: #d1d5db;
+$color-gray-500: #6b7280;
+$color-gray-700: #374151;
+$color-text-dark: #111827;
+$color-text-muted: #6b7280;
+$color-border-light: #e5e7eb;
+$color-danger: #b91c1c;
+$radius-md: 14px;
+$radius-lg: 24px;
+$radius-pill: 999px;
+$shadow-soft: 0 16px 40px rgba(15, 118, 110, 0.08);
+
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --color-primary: #{$color-primary};
+  --color-primary-dark: #{$color-primary-dark};
+  --color-primary-light: #{$color-primary-light};
+  --color-accent: #{$color-accent};
+  --color-bg: #{$color-bg};
+  --color-surface-light: #{$color-surface-light};
+  --color-surface: #{$color-surface};
+  --color-gray-100: #{$color-gray-100};
+  --color-gray-200: #{$color-gray-200};
+  --color-gray-500: #{$color-gray-500};
+  --color-gray-700: #{$color-gray-700};
+  --color-text-dark: #{$color-text-dark};
+  --color-text-muted: #{$color-text-muted};
+  --color-border-light: #{$color-border-light};
+  --color-danger: #{$color-danger};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-pill: #{$radius-pill};
+  --shadow-soft: #{$shadow-soft};
+  --font-family: "Nunito", "Segoe UI", Roboto, sans-serif;
+  --transition-fast: 0.2s ease;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-dark);
+  font-family: var(--font-family);
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
