@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import LoginScreen from "./components/Login Screen/LoginScreen";
 import NotificationStack from "./components/Notifications/NotificationBanner";
 import { getStoredToken, loginUser, logoutUser } from "./services/auth";
@@ -85,64 +86,77 @@ function App() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <>
-        <LoginScreen
-          values={formValues}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          loading={loading}
-          error={error}
-        />
-        <NotificationStack
-          notifications={notifications}
-          onClose={handleCloseNotification}
-        />
-      </>
-    );
-  }
-
   return (
-    <main className="dashboard-shell">
-      <section className="dashboard-hero">
-        <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>Hardware store control center</h1>
-          <p className="hero-copy">
-            Ready for the next step: inventory, sales, and reporting views will
-            be added here.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="secondary-btn"
-          onClick={() => {
-            logoutUser();
-            setIsAuthenticated(false);
-          }}
-        >
-          Sign out
-        </button>
-      </section>
+    <>
+      <AnimatePresence mode="wait">
+        {!isAuthenticated ? (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.98 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="page-transition-wrapper"
+          >
+            <LoginScreen
+              values={formValues}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+            />
+          </motion.div>
+        ) : (
+          <motion.main
+            key="dashboard"
+            className="dashboard-shell"
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.98 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          >
+            <section className="dashboard-hero">
+              <div>
+                <p className="eyebrow">Dashboard</p>
+                <h1>Hardware store control center</h1>
+                <p className="hero-copy">
+                  Ready for the next step: inventory, sales, and reporting views
+                  will be added here.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  logoutUser();
+                  setIsAuthenticated(false);
+                }}
+              >
+                Sign out
+              </button>
+            </section>
 
-      <section className="dashboard-grid">
-        <article className="info-card">
-          <h2>Today&apos;s sales</h2>
-          <p className="stat">$4,820</p>
-          <span>Filtered by selected date range</span>
-        </article>
-        <article className="info-card">
-          <h2>Products in stock</h2>
-          <p className="stat">128</p>
-          <span>Always visible on the dashboard</span>
-        </article>
-      </section>
+            <section className="dashboard-grid">
+              <article className="info-card">
+                <h2>Today&apos;s sales</h2>
+                <p className="stat">$4,820</p>
+                <span>Filtered by selected date range</span>
+              </article>
+              <article className="info-card">
+                <h2>Products in stock</h2>
+                <p className="stat">128</p>
+                <span>Always visible on the dashboard</span>
+              </article>
+            </section>
+          </motion.main>
+        )}
+      </AnimatePresence>
+
       <NotificationStack
         notifications={notifications}
         onClose={handleCloseNotification}
       />
-    </main>
+    </>
   );
 }
 

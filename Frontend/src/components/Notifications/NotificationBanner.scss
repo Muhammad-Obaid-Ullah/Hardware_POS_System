@@ -119,6 +119,17 @@
   width: 100%;
   transform-origin: left center;
   background: linear-gradient(90deg, #16a34a, #4ade80);
+  animation: notification-progress linear forwards;
+  animation-duration: var(--progress-duration, 4000ms);
+}
+
+@keyframes notification-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .notification-banner--error .notification-banner__progress {

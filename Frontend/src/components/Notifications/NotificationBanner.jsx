@@ -63,6 +63,11 @@ function NotificationBanner({
   const resolvedTextColor = textColor;
   const resolvedIconColor = iconColor;
   const resolvedProgressColor = progressColor;
+  const progressStyle = resolvedProgressColor
+    ? {
+        background: `linear-gradient(90deg, ${resolvedProgressColor}, ${resolvedProgressColor}99)`,
+      }
+    : undefined;
 
   return (
     <motion.div
@@ -96,13 +101,12 @@ function NotificationBanner({
           <path d="M6 6l12 12M18 6 6 18" />
         </svg>
       </button>
-      <motion.div
+      <div
         className="notification-banner__progress"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: duration / 1000, ease: "linear" }}
         style={{
-          background: `linear-gradient(90deg, ${resolvedProgressColor}, ${resolvedProgressColor}99)`,
+          ...progressStyle,
+          transformOrigin: "left center",
+          "--progress-duration": `${duration}ms`,
         }}
       />
     </motion.div>

@@ -1,0 +1,18 @@
+.page-transition-wrapper,
+.dashboard-shell {
+  width: 100%;
+}
+
+.page-transition-wrapper {
+  min-height: 100vh;
+}
+
+.dashboard-shell {
+  padding: 2rem 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-shell {
+    padding: 3rem 2rem;
+  }
+}
