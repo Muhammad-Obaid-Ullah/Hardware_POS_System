@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import LoginScreen from "./components/Login Screen/LoginScreen";
 import NotificationStack from "./components/Notifications/NotificationBanner";
+import Sidebar from "./components/Sidebar/Sidebar";
+import ScreenPanel from "./components/ScreenPanel/ScreenPanel";
 import { getStoredToken, loginUser, logoutUser } from "./services/auth";
 import "./App.scss";
 
@@ -15,6 +17,7 @@ function App() {
   );
   const [formValues, setFormValues] = useState(demoCredentials);
   const [loading, setLoading] = useState(false);
+  const [activeScreen, setActiveScreen] = useState("Dashboard");
   const [error, setError] = useState("");
   const [notifications, setNotifications] = useState([]);
 
@@ -52,6 +55,7 @@ function App() {
         email: formValues.email,
         password: formValues.password,
       });
+      setActiveScreen("Dashboard");
       setIsAuthenticated(true);
       pushNotification("Signed in successfully", {
         icon: (
@@ -86,6 +90,12 @@ function App() {
     }
   };
 
+  const screens = ["Dashboard", "POS", "Inventory", "Sales", "Reports"];
+
+  const setScreen = (screen) => {
+    setActiveScreen(screen);
+  };
+
   return (
     <>
       <AnimatePresence mode="wait">
@@ -107,48 +117,34 @@ function App() {
             />
           </motion.div>
         ) : (
-          <motion.main
-            key="dashboard"
-            className="dashboard-shell"
+          <motion.div
+            key="app"
+            className="app-shell"
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -24, scale: 0.98 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
           >
-            <section className="dashboard-hero">
-              <div>
-                <p className="eyebrow">Dashboard</p>
-                <h1>Hardware store control center</h1>
-                <p className="hero-copy">
-                  Ready for the next step: inventory, sales, and reporting views
-                  will be added here.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={() => {
-                  logoutUser();
-                  setIsAuthenticated(false);
-                }}
-              >
-                Sign out
-              </button>
-            </section>
-
-            <section className="dashboard-grid">
-              <article className="info-card">
-                <h2>Today&apos;s sales</h2>
-                <p className="stat">$4,820</p>
-                <span>Filtered by selected date range</span>
-              </article>
-              <article className="info-card">
-                <h2>Products in stock</h2>
-                <p className="stat">128</p>
-                <span>Always visible on the dashboard</span>
-              </article>
-            </section>
-          </motion.main>
+            <Sidebar
+              screens={screens}
+              activeScreen={activeScreen}
+              onSelect={setScreen}
+              onLogout={() => {
+                logoutUser();
+                setIsAuthenticated(false);
+                pushNotification("Signed out successfully", {
+                  icon: (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  ),
+                });
+              }}
+            />
+            <main className="app-main">
+              <ScreenPanel key={activeScreen} title={activeScreen} />
+            </main>
+          </motion.div>
         )}
       </AnimatePresence>
 

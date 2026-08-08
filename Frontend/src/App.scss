@@ -1,18 +1,27 @@
 .page-transition-wrapper,
-.dashboard-shell {
+.app-shell {
+  min-height: 100vh;
+  display: flex;
   width: 100%;
+  background: var(--color-bg);
 }
 
 .page-transition-wrapper {
   min-height: 100vh;
 }
 
-.dashboard-shell {
-  padding: 2rem 1.5rem;
+.app-main {
+  flex: 1;
+  padding: 32px;
+  overflow: auto;
 }
 
-@media (min-width: 768px) {
-  .dashboard-shell {
-    padding: 3rem 2rem;
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-main {
+    padding: 20px;
   }
 }
