@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { CiSliderVertical, CiDollar } from "react-icons/ci";
+import { HiOutlineLogin } from "react-icons/hi";
 import "./LoginScreen.scss";
 
 function LoginScreen({ values, onChange, onSubmit, loading }) {
@@ -20,16 +22,11 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
               </p>
               <div className="hero-badges">
                 <span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 7h16M7 4v16M17 4v16" />
-                  </svg>
+                  <CiSliderVertical size={14} />
                   Inventory sync
                 </span>
                 <span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 7h14l-1 10H6L5 7Z" />
-                    <path d="M9 12h6" />
-                  </svg>
+                  <CiDollar size={14} />
                   Fast checkout
                 </span>
                 <span>
@@ -108,7 +105,8 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
                     className="login-btn"
                     disabled={loading}
                   >
-                    {loading ? "Logging in..." : "Log in"}
+                    <HiOutlineLogin size={18} />
+                    {loading ? "Logging in..." : "LOG IN"}
                   </button>
                 </div>
               </form>
