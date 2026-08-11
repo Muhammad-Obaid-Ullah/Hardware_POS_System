@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import LoginScreen from "./components/Login Screen/LoginScreen";
 import NotificationStack from "./components/Notifications/NotificationBanner";
@@ -95,6 +95,14 @@ function App() {
   const setScreen = (screen) => {
     setActiveScreen(screen);
   };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const main = document.querySelector(".app-main");
+    if (main) {
+      main.scrollTop = 0;
+    }
+  }, [activeScreen]);
 
   return (
     <>

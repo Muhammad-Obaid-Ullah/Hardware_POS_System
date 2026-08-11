@@ -1,6 +1,7 @@
 .page-transition-wrapper,
 .app-shell {
   min-height: 100vh;
+  height: 100%;
   display: flex;
   width: 100%;
   background: var(--color-bg);
@@ -8,19 +9,16 @@
 
 .app-main {
   flex: 1;
+  min-height: 0;
+  height: 100%;
   padding: 32px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--color-surface);
 }
 
 .page-transition-wrapper {
   min-height: 100vh;
-}
-
-.app-main {
-  flex: 1;
-  padding: 32px;
-  overflow: auto;
 }
 
 @media (max-width: 900px) {

@@ -55,6 +55,13 @@ function ScreenPanel({ title }) {
     let paymentMethodsChart = null;
     let topCompaniesChart = null;
 
+    // copy DOM refs into local variables so cleanup uses the same nodes
+    const salesEl = salesChartRef.current;
+    const profitEl = profitChartRef.current;
+    const topCategoriesEl = topCategoriesRef.current;
+    const paymentMethodsEl = paymentMethodsRef.current;
+    const topCompaniesEl = topCompaniesRef.current;
+
     (async () => {
       const Apex = (await import("apexcharts")).default;
 
@@ -264,40 +271,34 @@ function ScreenPanel({ title }) {
         yaxis: { show: true, labels: { show: true }, tickAmount: 4 },
       };
 
-      if (salesChartRef.current) {
+      if (salesEl) {
         // clear any previous chart markup (prevents duplicate SVGs in dev/strict mode)
-        salesChartRef.current.innerHTML = "";
-        salesChart = new Apex(salesChartRef.current, salesOpts);
+        salesEl.innerHTML = "";
+        salesChart = new Apex(salesEl, salesOpts);
         salesChart.render();
       }
 
-      if (profitChartRef.current) {
-        profitChartRef.current.innerHTML = "";
-        profitChart = new Apex(profitChartRef.current, profitOpts);
+      if (profitEl) {
+        profitEl.innerHTML = "";
+        profitChart = new Apex(profitEl, profitOpts);
         profitChart.render();
       }
 
-      if (topCategoriesRef.current) {
-        topCategoriesRef.current.innerHTML = "";
-        topCategoriesChart = new Apex(
-          topCategoriesRef.current,
-          topCategoriesOpts,
-        );
+      if (topCategoriesEl) {
+        topCategoriesEl.innerHTML = "";
+        topCategoriesChart = new Apex(topCategoriesEl, topCategoriesOpts);
         topCategoriesChart.render();
       }
 
-      if (paymentMethodsRef.current) {
-        paymentMethodsRef.current.innerHTML = "";
-        paymentMethodsChart = new Apex(
-          paymentMethodsRef.current,
-          paymentMethodsOpts,
-        );
+      if (paymentMethodsEl) {
+        paymentMethodsEl.innerHTML = "";
+        paymentMethodsChart = new Apex(paymentMethodsEl, paymentMethodsOpts);
         paymentMethodsChart.render();
       }
 
-      if (topCompaniesRef.current) {
-        topCompaniesRef.current.innerHTML = "";
-        topCompaniesChart = new Apex(topCompaniesRef.current, topCompaniesOpts);
+      if (topCompaniesEl) {
+        topCompaniesEl.innerHTML = "";
+        topCompaniesChart = new Apex(topCompaniesEl, topCompaniesOpts);
         topCompaniesChart.render();
       }
     })();
@@ -306,26 +307,27 @@ function ScreenPanel({ title }) {
       try {
         if (salesChart) {
           salesChart.destroy();
-          if (salesChartRef.current) salesChartRef.current.innerHTML = "";
+          if (salesEl) salesEl.innerHTML = "";
         }
         if (profitChart) {
           profitChart.destroy();
-          if (profitChartRef.current) profitChartRef.current.innerHTML = "";
+          if (profitEl) profitEl.innerHTML = "";
         }
         if (topCategoriesChart) {
           topCategoriesChart.destroy();
-          if (topCategoriesRef.current) topCategoriesRef.current.innerHTML = "";
+          if (topCategoriesEl) topCategoriesEl.innerHTML = "";
         }
         if (paymentMethodsChart) {
           paymentMethodsChart.destroy();
-          if (paymentMethodsRef.current)
-            paymentMethodsRef.current.innerHTML = "";
+          if (paymentMethodsEl) paymentMethodsEl.innerHTML = "";
         }
         if (topCompaniesChart) {
           topCompaniesChart.destroy();
-          if (topCompaniesRef.current) topCompaniesRef.current.innerHTML = "";
+          if (topCompaniesEl) topCompaniesEl.innerHTML = "";
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Chart cleanup error:", e);
+      }
     };
   }, [isDashboard]);
 
