@@ -42,12 +42,18 @@ function ScreenPanel({ title }) {
   const isDashboard = title === "Dashboard";
   const salesChartRef = useRef(null);
   const profitChartRef = useRef(null);
+  const topCategoriesRef = useRef(null);
+  const paymentMethodsRef = useRef(null);
+  const topCompaniesRef = useRef(null);
 
   useEffect(() => {
     if (!isDashboard) return;
 
     let salesChart = null;
     let profitChart = null;
+    let topCategoriesChart = null;
+    let paymentMethodsChart = null;
+    let topCompaniesChart = null;
 
     (async () => {
       const Apex = (await import("apexcharts")).default;
@@ -132,6 +138,132 @@ function ScreenPanel({ title }) {
         yaxis: { show: true, labels: { show: true }, tickAmount: 4 },
       };
 
+      const topCategoriesOpts = {
+        series: [
+          {
+            data: [1720, 1480, 1320, 1120, 980],
+          },
+        ],
+        chart: {
+          type: "bar",
+          height: 240,
+          toolbar: { show: false },
+          zoom: { enabled: false },
+        },
+        plotOptions: {
+          bar: {
+            horizontal: true,
+            barHeight: "75%",
+            borderRadius: 6,
+            borderRadiusApplication: "around",
+          },
+        },
+        fill: { opacity: 0.95, colors: ["var(--color-primary)"] },
+        colors: ["var(--color-primary)"],
+        dataLabels: {
+          enabled: true,
+          position: "center",
+          offsetY: 4,
+          formatter: (val, opts) => {
+            const total = opts.w.globals.seriesTotals[0] || 1;
+            return `${Math.round((val / total) * 100)}%`;
+          },
+          style: {
+            colors: ["#ffffff"],
+            fontSize: "0.65rem",
+            fontWeight: 700,
+          },
+          background: { enabled: false },
+          dropShadow: { enabled: false },
+        },
+        tooltip: { theme: "light" },
+        xaxis: {
+          categories: [
+            "Beverages",
+            "Snacks",
+            "Electronics",
+            "Clothing",
+            "Home",
+          ],
+          labels: { show: true },
+          axisBorder: { show: true },
+          axisTicks: { show: true },
+        },
+        yaxis: { show: true, labels: { show: true } },
+      };
+
+      const paymentMethodsOpts = {
+        series: [64, 36],
+        chart: {
+          type: "donut",
+          height: 240,
+          toolbar: { show: false },
+        },
+        labels: ["Cash", "Online"],
+        colors: ["var(--color-primary)", "rgba(20, 184, 166, 0.38)"],
+        plotOptions: {
+          pie: {
+            borderRadius: 12,
+            spacing: 5,
+            donut: {
+              size: "68%",
+              labels: {
+                show: false,
+              },
+            },
+          },
+        },
+        stroke: { width: 0 },
+        legend: {
+          position: "bottom",
+          horizontalAlign: "center",
+          fontSize: "0.82rem",
+          markers: { width: 10, height: 10, radius: 10 },
+        },
+        fill: { opacity: 1 },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => `${Math.round(val)}%`,
+          style: {
+            colors: ["#ffffff"],
+            fontSize: "0.65rem",
+            fontWeight: 700,
+          },
+          background: { enabled: false },
+          dropShadow: { enabled: false },
+        },
+        tooltip: { theme: "light" },
+      };
+
+      const topCompaniesOpts = {
+        series: [{ name: "Sales", data: [2020, 1840, 1600, 1430, 1280] }],
+        chart: { type: "bar", height: 240, toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 12, columnWidth: "50%" } },
+        colors: ["var(--color-primary)"],
+        dataLabels: {
+          enabled: true,
+          formatter: (val, opts) => {
+            const total = opts.w.globals.seriesTotals[0] || 1;
+            return `${Math.round((val / total) * 100)}%`;
+          },
+          style: {
+            colors: ["#ffffff"],
+            fontSize: "0.65rem",
+            fontWeight: 700,
+          },
+          background: { enabled: false },
+          dropShadow: { enabled: false },
+        },
+        tooltip: { theme: "light" },
+        xaxis: {
+          categories: ["Acme", "Nova", "Zenith", "Orion", "Apex"],
+          labels: { show: true },
+          axisBorder: { show: true },
+          axisTicks: { show: true },
+        },
+        yaxis: { show: true, labels: { show: true }, tickAmount: 4 },
+      };
+
       if (salesChartRef.current) {
         // clear any previous chart markup (prevents duplicate SVGs in dev/strict mode)
         salesChartRef.current.innerHTML = "";
@@ -144,6 +276,30 @@ function ScreenPanel({ title }) {
         profitChart = new Apex(profitChartRef.current, profitOpts);
         profitChart.render();
       }
+
+      if (topCategoriesRef.current) {
+        topCategoriesRef.current.innerHTML = "";
+        topCategoriesChart = new Apex(
+          topCategoriesRef.current,
+          topCategoriesOpts,
+        );
+        topCategoriesChart.render();
+      }
+
+      if (paymentMethodsRef.current) {
+        paymentMethodsRef.current.innerHTML = "";
+        paymentMethodsChart = new Apex(
+          paymentMethodsRef.current,
+          paymentMethodsOpts,
+        );
+        paymentMethodsChart.render();
+      }
+
+      if (topCompaniesRef.current) {
+        topCompaniesRef.current.innerHTML = "";
+        topCompaniesChart = new Apex(topCompaniesRef.current, topCompaniesOpts);
+        topCompaniesChart.render();
+      }
     })();
 
     return () => {
@@ -155,6 +311,19 @@ function ScreenPanel({ title }) {
         if (profitChart) {
           profitChart.destroy();
           if (profitChartRef.current) profitChartRef.current.innerHTML = "";
+        }
+        if (topCategoriesChart) {
+          topCategoriesChart.destroy();
+          if (topCategoriesRef.current) topCategoriesRef.current.innerHTML = "";
+        }
+        if (paymentMethodsChart) {
+          paymentMethodsChart.destroy();
+          if (paymentMethodsRef.current)
+            paymentMethodsRef.current.innerHTML = "";
+        }
+        if (topCompaniesChart) {
+          topCompaniesChart.destroy();
+          if (topCompaniesRef.current) topCompaniesRef.current.innerHTML = "";
         }
       } catch (e) {}
     };
@@ -200,6 +369,20 @@ function ScreenPanel({ title }) {
               <div className="dashboard-card dashboard-card--chart">
                 <p className="dashboard-card__label">Profit Trends</p>
                 <div className="dashboard-chart" ref={profitChartRef}></div>
+              </div>
+            </div>
+            <div className="dashboard-section__cards dashboard-section__cards--triple">
+              <div className="dashboard-card dashboard-card--chart">
+                <p className="dashboard-card__label">Top Categories</p>
+                <div className="dashboard-chart" ref={topCategoriesRef}></div>
+              </div>
+              <div className="dashboard-card dashboard-card--chart">
+                <p className="dashboard-card__label">Payment Methods</p>
+                <div className="dashboard-chart" ref={paymentMethodsRef}></div>
+              </div>
+              <div className="dashboard-card dashboard-card--chart">
+                <p className="dashboard-card__label">Top Companies</p>
+                <div className="dashboard-chart" ref={topCompaniesRef}></div>
               </div>
             </div>
           </section>

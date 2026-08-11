@@ -99,6 +99,11 @@
   gap: 16px;
 }
 
+.dashboard-section__cards--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .dashboard-card {
   padding: 20px;
   background: var(--color-surface);
@@ -191,5 +196,15 @@
   .screen-panel {
     min-height: auto;
     padding: 24px;
+  }
+
+  .dashboard-section__cards--metrics,
+  .dashboard-section__cards--charts,
+  .dashboard-section__cards--triple {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-chart {
+    height: 220px;
   }
 }
