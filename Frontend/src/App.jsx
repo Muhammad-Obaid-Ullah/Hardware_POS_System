@@ -150,7 +150,11 @@ function App() {
               }}
             />
             <main className="app-main">
-              <ScreenPanel key={activeScreen} title={activeScreen} />
+              <ScreenPanel
+                key={activeScreen}
+                title={activeScreen}
+                onNavigate={setScreen}
+              />
             </main>
           </motion.div>
         )}

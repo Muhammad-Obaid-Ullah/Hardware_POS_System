@@ -1,7 +1,19 @@
-import { useEffect, useRef } from "react";
-import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { IoTrendingUp } from "react-icons/io5";
-import { LuTags, LuLayoutList, LuBoxes } from "react-icons/lu";
+import {
+  LuTags,
+  LuLayoutList,
+  LuTriangleAlert,
+  LuPackageMinus,
+  LuPackageX,
+  LuChevronLeft,
+  LuChevronRight,
+} from "react-icons/lu";
+import { FaRupeeSign } from "react-icons/fa6";
+import { TbSitemap } from "react-icons/tb";
+import { BsBoxes } from "react-icons/bs";
+import { BiCartAdd } from "react-icons/bi";
 import "./ScreenPanel.scss";
 
 const performanceCards = [
@@ -24,27 +36,255 @@ const performanceCards = [
     detail: "Profit after costs",
   },
   {
-    icon: <LuBoxes />,
+    icon: <BsBoxes />,
     label: "Items Sold",
     value: "562",
     detail: "Products moved today",
   },
 ];
 
-const overviewCards = [
-  { label: "Products in stock", value: "1,248", detail: "Current inventory" },
-  { label: "Active customers", value: "3,620", detail: "Store base" },
-  { label: "Pending orders", value: "24", detail: "Needs attention" },
-  { label: "Store rating", value: "4.8 / 5", detail: "Customer feedback" },
+const storePerformanceCards = [
+  {
+    icon: <FaRupeeSign />,
+    label: "Inventory Value",
+    value: "PKR 215K",
+    detail: "Current stock worth",
+  },
+  {
+    icon: <LuTags />,
+    label: "Potential Sales",
+    value: "PKR 89K",
+    detail: "Projected revenue",
+  },
+  {
+    icon: <IoTrendingUp />,
+    label: "Estimated Profit",
+    value: "PKR 24K",
+    detail: "After costs",
+  },
+  {
+    icon: <TbSitemap />,
+    label: "Total Categories",
+    value: "18",
+    detail: "Product categories",
+  },
 ];
 
-function ScreenPanel({ title }) {
+function ScreenPanel({ title, onNavigate }) {
   const isDashboard = title === "Dashboard";
+  const [stockPage, setStockPage] = useState(0);
   const salesChartRef = useRef(null);
   const profitChartRef = useRef(null);
   const topCategoriesRef = useRef(null);
   const paymentMethodsRef = useRef(null);
   const topCompaniesRef = useRef(null);
+
+  const stockInfoRows = [
+    {
+      item: "Sensor Cables",
+      stock: 9,
+      threshold: 20,
+    },
+    {
+      item: "Thermal Paper",
+      stock: 14,
+      threshold: 9,
+    },
+    {
+      item: "Coffee Beans",
+      stock: 0,
+      threshold: 30,
+    },
+    {
+      item: "USB Barcode Scanner",
+      stock: 6,
+      threshold: 10,
+    },
+    {
+      item: "Receipt Printer Rolls",
+      stock: 0,
+      threshold: 12,
+    },
+    {
+      item: "Wireless Keyboards",
+      stock: 18,
+      threshold: 15,
+    },
+    {
+      item: "Cash Drawer Trays",
+      stock: 4,
+      threshold: 8,
+    },
+    {
+      item: "Ethernet Cables",
+      stock: 13,
+      threshold: 10,
+    },
+    {
+      item: "Display Stands",
+      stock: 0,
+      threshold: 6,
+    },
+    {
+      item: "Label Printer Ink",
+      stock: 7,
+      threshold: 7,
+    },
+    {
+      item: "POS Terminal Stands",
+      stock: 12,
+      threshold: 10,
+    },
+    {
+      item: "HDMI Display Cables",
+      stock: 5,
+      threshold: 8,
+    },
+    {
+      item: "Keyboard Wrist Rests",
+      stock: 0,
+      threshold: 5,
+    },
+    {
+      item: "Cash Register Keys",
+      stock: 16,
+      threshold: 12,
+    },
+    {
+      item: "Receipt Printer Heads",
+      stock: 3,
+      threshold: 6,
+    },
+    {
+      item: "Barcode Labels",
+      stock: 23,
+      threshold: 18,
+    },
+    {
+      item: "Network Switches",
+      stock: 0,
+      threshold: 4,
+    },
+    {
+      item: "Power Adapters",
+      stock: 9,
+      threshold: 9,
+    },
+    {
+      item: "USB Extension Cables",
+      stock: 19,
+      threshold: 14,
+    },
+    {
+      item: "Customer Display Screens",
+      stock: 2,
+      threshold: 5,
+    },
+    {
+      item: "Receipt Paper Boxes",
+      stock: 28,
+      threshold: 22,
+    },
+    {
+      item: "Cashier Headsets",
+      stock: 0,
+      threshold: 3,
+    },
+    {
+      item: "Tablet Charging Docks",
+      stock: 11,
+      threshold: 8,
+    },
+    {
+      item: "Inventory Tags",
+      stock: 7,
+      threshold: 10,
+    },
+    {
+      item: "Security Cable Locks",
+      stock: 15,
+      threshold: 10,
+    },
+    {
+      item: "Handheld POS Scanners",
+      stock: 0,
+      threshold: 6,
+    },
+    {
+      item: "Monitor Mounts",
+      stock: 8,
+      threshold: 8,
+    },
+    {
+      item: "Power Strip Units",
+      stock: 17,
+      threshold: 12,
+    },
+    {
+      item: "Thermal Printer Covers",
+      stock: 4,
+      threshold: 7,
+    },
+    {
+      item: "Wireless Mouse Units",
+      stock: 20,
+      threshold: 15,
+    },
+    {
+      item: "Shelf Label Holders",
+      stock: 0,
+      threshold: 8,
+    },
+    {
+      item: "POS Software Licenses",
+      stock: 13,
+      threshold: 10,
+    },
+  ];
+
+  const getStockStatus = (stock, threshold) => {
+    if (stock === 0) {
+      return {
+        label: "Out of Stock",
+        className: "out-of-stock",
+        icon: <LuPackageX aria-hidden="true" />,
+      };
+    }
+
+    if (stock <= threshold) {
+      return {
+        label: "Critical",
+        className: "critical",
+        icon: <LuPackageMinus aria-hidden="true" />,
+      };
+    }
+
+    if (stock <= threshold + 5) {
+      return {
+        label: "Low Stock",
+        className: "low-stock",
+        icon: <LuTriangleAlert aria-hidden="true" />,
+      };
+    }
+
+    return {
+      label: "Low Stock",
+      className: "low-stock",
+      icon: <LuTriangleAlert aria-hidden="true" />,
+    };
+  };
+
+  const stockPageSize = 5;
+  const stockPageCount = Math.ceil(stockInfoRows.length / stockPageSize);
+  const visibleStockRows = stockInfoRows.slice(
+    stockPage * stockPageSize,
+    (stockPage + 1) * stockPageSize,
+  );
+  const firstStockResult = stockPage * stockPageSize + 1;
+  const lastStockResult = Math.min(
+    (stockPage + 1) * stockPageSize,
+    stockInfoRows.length,
+  );
 
   useEffect(() => {
     if (!isDashboard) return;
@@ -393,14 +633,116 @@ function ScreenPanel({ title }) {
             <div className="dashboard-section__header">
               <p className="dashboard-section__title">Store Overview</p>
             </div>
-            <div className="dashboard-section__cards">
-              {overviewCards.map((card) => (
-                <div key={card.label} className="dashboard-card">
-                  <p className="dashboard-card__label">{card.label}</p>
-                  <p className="dashboard-card__value">{card.value}</p>
-                  <p className="dashboard-card__detail">{card.detail}</p>
+            <div className="dashboard-section__cards dashboard-section__cards--metrics">
+              {storePerformanceCards.map((card) => (
+                <div
+                  key={card.label}
+                  className="dashboard-card dashboard-card--metric"
+                >
+                  <div className="dashboard-card__icon">{card.icon ?? ""}</div>
+                  <div>
+                    <p className="dashboard-card__label">{card.label}</p>
+                    <p className="dashboard-card__value">{card.value}</p>
+                    <p className="dashboard-card__detail">{card.detail}</p>
+                  </div>
                 </div>
               ))}
+            </div>
+
+            <div className="stock-info">
+              <div className="stock-info__header">
+                <p className="stock-info__title">Stock Information</p>
+              </div>
+              <div className="stock-info__table">
+                <div className="stock-info__row stock-info__row--header">
+                  <span>Item</span>
+                  <span>Status</span>
+                  <span>Current Stock</span>
+                  <span>Minimum Stock Threshold</span>
+                  <span>Action</span>
+                </div>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={stockPage}
+                    className="stock-info__page"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    {visibleStockRows.map((row) => {
+                      const status = getStockStatus(row.stock, row.threshold);
+
+                      return (
+                        <div key={row.item} className="stock-info__row">
+                          <span>{row.item}</span>
+                          <span>
+                            <span
+                              className={`stock-info__indicator stock-info__indicator--${status.className}`}
+                            >
+                              {status.icon}
+                              {status.label}
+                            </span>
+                          </span>
+                          <span className="stock-info__value">{row.stock}</span>
+                          <span className="stock-info__value">
+                            {row.threshold}
+                          </span>
+                          <span>
+                            <button
+                              type="button"
+                              className="stock-info__button"
+                              onClick={() => onNavigate?.("Inventory")}
+                              aria-label={`Restock ${row.item}`}
+                              title={`Restock ${row.item}`}
+                            >
+                              <BiCartAdd aria-hidden="true" />
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {Array.from({
+                      length: stockPageSize - visibleStockRows.length,
+                    }).map((_, index) => (
+                      <div
+                        key={`empty-stock-row-${index}`}
+                        className="stock-info__row stock-info__row--placeholder"
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              {stockPageCount > 1 && (
+                <div className="stock-info__pagination">
+                  <span className="stock-info__results">
+                    Showing Results {firstStockResult} - {lastStockResult} out
+                    of {stockInfoRows.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="stock-info__page-button"
+                    onClick={() => setStockPage((page) => page - 1)}
+                    disabled={stockPage === 0}
+                    aria-label="Previous stock items"
+                  >
+                    <LuChevronLeft aria-hidden="true" />
+                  </button>
+                  <span className="stock-info__page-status">
+                    {stockPage + 1} / {stockPageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="stock-info__page-button"
+                    onClick={() => setStockPage((page) => page + 1)}
+                    disabled={stockPage === stockPageCount - 1}
+                    aria-label="Next stock items"
+                  >
+                    <LuChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         </div>
