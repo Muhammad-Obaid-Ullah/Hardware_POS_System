@@ -183,16 +183,30 @@ function Dashboard({ onNavigate }) {
         area("Profit", series(3000), "var(--color-primary-dark)"),
         {
           series: [{ data: [1720, 1480, 1320, 1120, 980] }],
-          chart: { type: "bar", height: 240, toolbar: { show: false } },
+          chart: {
+            id: "top-categories-chart",
+            type: "bar",
+            height: 240,
+            toolbar: { show: false },
+          },
           colors: ["var(--color-primary)"],
           plotOptions: {
-            bar: { horizontal: true, barHeight: "75%", borderRadius: 6 },
+            bar: {
+              horizontal: true,
+              barHeight: "75%",
+              borderRadius: 6,
+              dataLabels: { position: "center" },
+            },
           },
           dataLabels: {
             enabled: true,
+            position: "center",
+            offsetY: 4,
             formatter: (value, opts) =>
               `${Math.round((value / (opts.w.globals.seriesTotals[0] || 1)) * 100)}%`,
-            style: { colors: ["#fff"] },
+            style: { colors: ["#fff"], fontSize: "0.65rem" },
+            background: { enabled: false },
+            dropShadow: { enabled: false },
           },
           xaxis: {
             categories: [
@@ -217,7 +231,7 @@ function Dashboard({ onNavigate }) {
           dataLabels: {
             enabled: true,
             formatter: (value) => `${Math.round(value)}%`,
-            style: { colors: ["#fff"] },
+            style: { colors: ["#fff"], fontSize: "0.65rem" },
           },
         },
         {
@@ -229,7 +243,7 @@ function Dashboard({ onNavigate }) {
             enabled: true,
             formatter: (value, opts) =>
               `${Math.round((value / (opts.w.globals.seriesTotals[0] || 1)) * 100)}%`,
-            style: { colors: ["#fff"] },
+            style: { colors: ["#fff"], fontSize: "0.65rem" },
           },
           xaxis: { categories: ["Acme", "Nova", "Zenith", "Orion", "Apex"] },
         },
