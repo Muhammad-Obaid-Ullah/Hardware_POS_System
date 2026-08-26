@@ -172,10 +172,9 @@
 
 .stock-info__row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.4fr) minmax(100px, 0.85fr) minmax(
-      110px,
-      0.8fr
-    ) minmax(150px, 1fr) 64px;
+  grid-template-columns:
+    minmax(150px, 1.4fr) minmax(100px, 0.85fr) minmax(110px, 0.8fr)
+    minmax(150px, 1fr) 64px;
   gap: 12px;
   align-items: center;
   min-width: 680px;

@@ -149,7 +149,9 @@ function App() {
                 });
               }}
             />
-            <main className="app-main">
+            <main
+              className={`app-main app-main--${activeScreen.toLowerCase()}`}
+            >
               <ScreenPanel
                 key={activeScreen}
                 title={activeScreen}

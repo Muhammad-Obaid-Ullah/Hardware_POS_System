@@ -17,6 +17,10 @@
   background: var(--color-surface);
 }
 
+.app-main--pos {
+  overflow: hidden;
+}
+
 .page-transition-wrapper {
   min-height: 100vh;
 }
@@ -28,5 +32,9 @@
 
   .app-main {
     padding: 20px;
+  }
+
+  .app-main--pos {
+    overflow: auto;
   }
 }
