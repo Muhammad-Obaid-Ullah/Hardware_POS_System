@@ -156,6 +156,7 @@ function App() {
                 key={activeScreen}
                 title={activeScreen}
                 onNavigate={setScreen}
+                onNotify={pushNotification}
               />
             </main>
           </motion.div>

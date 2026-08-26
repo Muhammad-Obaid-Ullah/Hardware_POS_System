@@ -10,6 +10,7 @@ import {
   LuTag,
   LuTrash2,
   LuShoppingCart,
+  LuX,
 } from "react-icons/lu";
 import "./POS.scss";
 
@@ -204,13 +205,14 @@ function FilterDropdown({ label, value, options, onChange }) {
   );
 }
 
-function POS() {
+function POS({ onNotify }) {
   const [cartItems, setCartItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [transactionNumber, setTransactionNumber] = useState("");
+  const [invoice, setInvoice] = useState(null);
 
   const brands = [...new Set(products.map((product) => product.brand))];
   const categories = [...new Set(products.map((product) => product.category))];
@@ -229,11 +231,31 @@ function POS() {
     cartItems.find((item) => item.id === productId)?.quantity ?? 0;
 
   const addToCart = (product) => {
+    const quantityInCart = getCartQuantity(product.id);
+
+    if (product.stock === 0 || quantityInCart >= product.stock) {
+      onNotify?.(
+        product.stock === 0
+          ? "This item is out of stock"
+          : "No more units available for this item",
+        {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+          icon: (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8v5" />
+              <path d="M12 16h.01" />
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+            </svg>
+          ),
+        },
+      );
+      return;
+    }
+
     setCartItems((items) => {
       const existing = items.find((item) => item.id === product.id);
-      const quantityInCart = existing?.quantity ?? 0;
-
-      if (quantityInCart >= product.stock) return items;
 
       if (existing)
         return items.map((item) =>
@@ -261,6 +283,48 @@ function POS() {
   };
   const clearCart = () => {
     setCartItems([]);
+  };
+  const handleCheckout = () => {
+    const generatedAt = new Date();
+    const invoiceNumber = String(generatedAt.getTime()).slice(-6);
+    const invoiceItems = cartItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice ?? item.price,
+    }));
+    const invoiceTotal = invoiceItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0,
+    );
+
+    setInvoice({
+      number: invoiceNumber,
+      date: generatedAt.toLocaleDateString(),
+      time: generatedAt.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      items: invoiceItems,
+      total: invoiceTotal,
+      paymentMethod,
+      transactionNumber,
+    });
+
+    setCartItems([]);
+    setPaymentMethod("cash");
+    setTransactionNumber("");
+    onNotify?.(
+      `Checkout Successful! Invoice # INV-${invoiceNumber} generated.`,
+      {
+        icon: (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ),
+      },
+    );
   };
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -342,7 +406,7 @@ function POS() {
                 type="button"
                 className={`pos-product ${product.stock === 0 ? "pos-product--out-of-stock" : ""}`}
                 onClick={() => addToCart(product)}
-                disabled={product.stock === 0}
+                aria-disabled={product.stock === 0}
               >
                 <span className="pos-product__badge-row">
                   <span className="pos-product__badge pos-product__category-badge">
@@ -524,11 +588,81 @@ function POS() {
             type="button"
             className="pos-cart__checkout"
             disabled={!cartItems.length}
+            onClick={handleCheckout}
           >
             Checkout
           </button>
         </div>
       </aside>
+      {invoice && (
+        <div
+          className="invoice-modal"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setInvoice(null);
+          }}
+        >
+          <section
+            className="invoice-paper"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invoice-title"
+          >
+            <button
+              type="button"
+              className="invoice-paper__close"
+              onClick={() => setInvoice(null)}
+              aria-label="Close invoice"
+            >
+              <LuX aria-hidden="true" />
+            </button>
+            <div className="invoice-paper__header">
+              <span className="invoice-paper__eyebrow">Payment receipt</span>
+              <h2 id="invoice-title">Invoice</h2>
+              <span className="invoice-paper__number">
+                INV-{invoice.number}
+              </span>
+            </div>
+            <div className="invoice-paper__meta">
+              <span>
+                Date <strong>{invoice.date}</strong>
+              </span>
+              <span>
+                Time <strong>{invoice.time}</strong>
+              </span>
+            </div>
+            <div className="invoice-paper__items">
+              <div className="invoice-paper__items-heading">
+                <span>Items</span>
+                <span>Qty</span>
+              </div>
+              {invoice.items.map((item) => (
+                <div className="invoice-paper__item" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>PKR {item.unitPrice.toLocaleString()}</span>
+                  </div>
+                  <strong>{item.quantity}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="invoice-paper__total">
+              <span>Total price</span>
+              <strong>PKR {invoice.total.toLocaleString()}</strong>
+            </div>
+            <div className="invoice-paper__payment">
+              <span>Payment method</span>
+              <strong>
+                {invoice.paymentMethod === "online" ? "Online" : "Cash"}
+              </strong>
+              {invoice.paymentMethod === "online" &&
+                invoice.transactionNumber && (
+                  <small>Transaction #{invoice.transactionNumber}</small>
+                )}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

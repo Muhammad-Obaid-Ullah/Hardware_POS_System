@@ -3,13 +3,13 @@ import Dashboard from "../Dashboard/Dashboard";
 import POS from "../POS/POS";
 import "./ScreenPanel.scss";
 
-function ScreenPanel({ title, onNavigate }) {
+function ScreenPanel({ title, onNavigate, onNotify }) {
   let screenContent;
 
   if (title === "Dashboard") {
     screenContent = <Dashboard onNavigate={onNavigate} />;
   } else if (title === "POS") {
-    screenContent = <POS />;
+    screenContent = <POS onNotify={onNotify} />;
   } else {
     screenContent = (
       <div className="screen-panel__content">
