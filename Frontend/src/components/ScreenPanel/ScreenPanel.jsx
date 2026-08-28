@@ -1,15 +1,38 @@
 import { motion } from "motion/react";
 import Dashboard from "../Dashboard/Dashboard";
 import POS from "../POS/POS";
+import Sales from "../Sales/Sales";
 import "./ScreenPanel.scss";
 
-function ScreenPanel({ title, onNavigate, onNotify }) {
+function ScreenPanel({
+  title,
+  onNavigate,
+  onNotify,
+  invoices,
+  onInvoiceCreated,
+  onInvoiceDeleted,
+  onInvoiceRestored,
+  onInvoiceRefunded,
+  onInvoicePartiallyRefunded,
+}) {
   let screenContent;
 
   if (title === "Dashboard") {
     screenContent = <Dashboard onNavigate={onNavigate} />;
   } else if (title === "POS") {
-    screenContent = <POS onNotify={onNotify} />;
+    screenContent = (
+      <POS onNotify={onNotify} onInvoiceCreated={onInvoiceCreated} />
+    );
+  } else if (title === "Sales") {
+    screenContent = (
+      <Sales
+        invoices={invoices}
+        onInvoiceDeleted={onInvoiceDeleted}
+        onInvoiceRestored={onInvoiceRestored}
+        onInvoiceRefunded={onInvoiceRefunded}
+        onInvoicePartiallyRefunded={onInvoicePartiallyRefunded}
+      />
+    );
   } else {
     screenContent = (
       <div className="screen-panel__content">

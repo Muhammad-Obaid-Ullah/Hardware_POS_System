@@ -20,6 +20,7 @@ function App() {
   const [activeScreen, setActiveScreen] = useState("Dashboard");
   const [error, setError] = useState("");
   const [notifications, setNotifications] = useState([]);
+  const [invoices, setInvoices] = useState([]);
 
   const pushNotification = (message, options = {}) => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -157,6 +158,61 @@ function App() {
                 title={activeScreen}
                 onNavigate={setScreen}
                 onNotify={pushNotification}
+                invoices={invoices}
+                onInvoiceCreated={(invoice) =>
+                  setInvoices((current) => [invoice, ...current])
+                }
+                onInvoiceDeleted={(invoiceNumber) =>
+                  setInvoices((current) =>
+                    current.map((invoice) =>
+                      invoice.number === invoiceNumber
+                        ? { ...invoice, deleted: true }
+                        : invoice,
+                    ),
+                  )
+                }
+                onInvoiceRestored={(invoiceNumber) =>
+                  setInvoices((current) =>
+                    current.map((invoice) =>
+                      invoice.number === invoiceNumber
+                        ? { ...invoice, deleted: false }
+                        : invoice,
+                    ),
+                  )
+                }
+                onInvoiceRefunded={(invoiceNumber) =>
+                  setInvoices((current) =>
+                    current.map((invoice) =>
+                      invoice.number === invoiceNumber
+                        ? {
+                            ...invoice,
+                            refunded: true,
+                            partiallyRefunded: false,
+                          }
+                        : invoice,
+                    ),
+                  )
+                }
+                onInvoicePartiallyRefunded={(
+                  invoiceNumber,
+                  items,
+                  total,
+                  isFullyRefunded,
+                ) =>
+                  setInvoices((current) =>
+                    current.map((invoice) =>
+                      invoice.number === invoiceNumber
+                        ? {
+                            ...invoice,
+                            items,
+                            total,
+                            refunded: isFullyRefunded,
+                            partiallyRefunded: !isFullyRefunded,
+                          }
+                        : invoice,
+                    ),
+                  )
+                }
               />
             </main>
           </motion.div>

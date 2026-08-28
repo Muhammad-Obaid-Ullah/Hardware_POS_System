@@ -145,7 +145,7 @@ const products = [
   stock: product.id % 9 === 0 ? 0 : 4 + ((product.id * 7) % 18),
 }));
 
-function FilterDropdown({ label, value, options, onChange }) {
+export function FilterDropdown({ label, value, options, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const selectedOption = options.find((option) => option.value === value);
@@ -205,7 +205,7 @@ function FilterDropdown({ label, value, options, onChange }) {
   );
 }
 
-function POS({ onNotify }) {
+function POS({ onNotify, onInvoiceCreated }) {
   const [cartItems, setCartItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -298,8 +298,9 @@ function POS({ onNotify }) {
       0,
     );
 
-    setInvoice({
+    const completedInvoice = {
       number: invoiceNumber,
+      createdAt: generatedAt.toISOString(),
       date: generatedAt.toLocaleDateString(),
       time: generatedAt.toLocaleTimeString([], {
         hour: "2-digit",
@@ -310,7 +311,10 @@ function POS({ onNotify }) {
       total: invoiceTotal,
       paymentMethod,
       transactionNumber,
-    });
+    };
+
+    setInvoice(completedInvoice);
+    onInvoiceCreated?.(completedInvoice);
 
     setCartItems([]);
     setPaymentMethod("cash");
