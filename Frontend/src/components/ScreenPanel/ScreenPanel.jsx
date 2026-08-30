@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import Dashboard from "../Dashboard/Dashboard";
 import POS from "../POS/POS";
 import Sales from "../Sales/Sales";
+import Reports from "../Reports/Reports";
 import "./ScreenPanel.scss";
 
 function ScreenPanel({
@@ -33,6 +34,8 @@ function ScreenPanel({
         onInvoicePartiallyRefunded={onInvoicePartiallyRefunded}
       />
     );
+  } else if (title === "Reports") {
+    screenContent = <Reports invoices={invoices} onNotify={onNotify} />;
   } else {
     screenContent = (
       <div className="screen-panel__content">

@@ -643,6 +643,9 @@
   gap: 14px;
 }
 .sales-invoice-paper__items-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding-bottom: 7px;
   border-bottom: 1px solid var(--color-gray-200);
   color: var(--color-text-muted);
@@ -651,6 +654,29 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.sales-invoice-paper__items-heading-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sales-invoice-paper__items-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: var(--color-gray-700);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .sales-invoice-paper__item {
   font-size: 0.8rem;
 }

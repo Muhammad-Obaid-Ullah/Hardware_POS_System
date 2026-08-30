@@ -176,6 +176,7 @@ function DatePicker({ label, value, min, max, onChange }) {
     ].join("-");
     if ((!min || dateValue >= min) && (!max || dateValue <= max)) {
       onChange(dateValue);
+      setMonthDate(selected);
       setIsOpen(false);
     }
   };
@@ -372,11 +373,6 @@ function InvoiceReceipt({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftItems, setDraftItems] = useState(invoice.items);
-
-  useEffect(() => {
-    setDraftItems(invoice.items);
-    setIsEditing(false);
-  }, [invoice]);
 
   const decreaseItem = (itemId) => {
     setDraftItems((items) =>
@@ -926,6 +922,7 @@ function Sales({
       <AnimatePresence>
         {selectedInvoice && (
           <InvoiceReceipt
+            key={`${selectedInvoice.number}-${selectedInvoice.total}-${selectedInvoice.refunded}-${selectedInvoice.partiallyRefunded}-${selectedInvoice.deleted}-${selectedInvoice.items.map((item) => `${item.id}:${item.quantity}`).join(",")}`}
             invoice={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
             onDelete={deleteInvoice}
