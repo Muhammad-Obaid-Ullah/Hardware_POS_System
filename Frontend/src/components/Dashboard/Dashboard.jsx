@@ -7,6 +7,7 @@ import {
   LuTriangleAlert,
   LuPackageMinus,
   LuPackageX,
+  LuCalendarDays,
   LuChevronLeft,
   LuChevronRight,
 } from "react-icons/lu";
@@ -105,8 +106,230 @@ const stockInfoRows = [
   ["POS Software Licenses", 13, 10],
 ].map(([item, stock, threshold]) => ({ item, stock, threshold }));
 
+const dashboardWeekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function formatDashboardDate(dateValue) {
+  if (!dateValue) return "Select date";
+  return new Date(`${dateValue}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getDashboardMonthDays(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return [
+    ...Array.from({ length: firstDay }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+  ];
+}
+
+function getDashboardToday() {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function getDashboardRange(fromDate, toDate) {
+  const isToday =
+    fromDate === getDashboardToday() && (!toDate || toDate === fromDate);
+  if (isToday) {
+    return {
+      isHourly: true,
+      labels: Array.from({ length: 24 }, (_, hour) => {
+        const suffix = hour < 12 ? "AM" : "PM";
+        const displayHour = hour % 12 || 12;
+        return `${displayHour} ${suffix}`;
+      }),
+      rangeDays: 1,
+    };
+  }
+
+  const today = new Date(`${getDashboardToday()}T00:00:00`);
+  const end = toDate ? new Date(`${toDate}T00:00:00`) : today;
+  const start = fromDate
+    ? new Date(`${fromDate}T00:00:00`)
+    : new Date(end.getTime() - 89 * 24 * 60 * 60 * 1000);
+  const rangeDays = Math.max(
+    1,
+    Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
+  );
+  const labels = Array.from({ length: rangeDays }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  });
+
+  return { isHourly: false, labels, rangeDays };
+}
+
+function DashboardDatePicker({ label, value, min, max, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [monthDate, setMonthDate] = useState(() =>
+    value ? new Date(`${value}T00:00:00`) : new Date(),
+  );
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleOutsideClick = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  const days = getDashboardMonthDays(monthDate);
+  const monthLabel = monthDate.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+  const selectDay = (day) => {
+    if (!day) return;
+    const selected = new Date(
+      monthDate.getFullYear(),
+      monthDate.getMonth(),
+      day,
+    );
+    const dateValue = [
+      selected.getFullYear(),
+      String(selected.getMonth() + 1).padStart(2, "0"),
+      String(selected.getDate()).padStart(2, "0"),
+    ].join("-");
+    if ((!min || dateValue >= min) && (!max || dateValue <= max)) {
+      onChange(dateValue);
+      setMonthDate(selected);
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div className="dashboard-date-picker" ref={pickerRef}>
+      <span className="sr-only">Filter sales from or to date</span>
+      <button
+        type="button"
+        className="dashboard-date-picker__trigger"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <LuCalendarDays aria-hidden="true" />
+        <span>{label}</span>
+        <strong>{formatDashboardDate(value)}</strong>
+      </button>
+      {isOpen && (
+        <div className="dashboard-date-picker__menu">
+          <div className="dashboard-date-picker__header">
+            <strong>{monthLabel}</strong>
+            <div>
+              <button
+                type="button"
+                aria-label="Previous month"
+                onClick={() =>
+                  setMonthDate(
+                    new Date(
+                      monthDate.getFullYear(),
+                      monthDate.getMonth() - 1,
+                      1,
+                    ),
+                  )
+                }
+              >
+                <LuChevronLeft aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next month"
+                onClick={() =>
+                  setMonthDate(
+                    new Date(
+                      monthDate.getFullYear(),
+                      monthDate.getMonth() + 1,
+                      1,
+                    ),
+                  )
+                }
+              >
+                <LuChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div className="dashboard-date-picker__weekdays">
+            {dashboardWeekDays.map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+          <div className="dashboard-date-picker__days">
+            {days.map((day, index) => {
+              const selected =
+                day &&
+                `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+              const disabled =
+                !day || (min && selected < min) || (max && selected > max);
+              return (
+                <button
+                  type="button"
+                  key={`${monthLabel}-${index}`}
+                  className={
+                    selected === value
+                      ? "dashboard-date-picker__day--selected"
+                      : ""
+                  }
+                  disabled={disabled}
+                  onClick={() => selectDay(day)}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          <div className="dashboard-date-picker__actions">
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              disabled={
+                (min && getDashboardToday() < min) ||
+                (max && getDashboardToday() > max)
+              }
+              onClick={() => {
+                const today = getDashboardToday();
+                if ((!min || today >= min) && (!max || today <= max)) {
+                  onChange(today);
+                  setMonthDate(new Date());
+                  setIsOpen(false);
+                }
+              }}
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Dashboard({ onNavigate }) {
   const [stockPage, setStockPage] = useState(0);
+  const [salesFromDate, setSalesFromDate] = useState("");
+  const [salesToDate, setSalesToDate] = useState("");
   const salesChartRef = useRef(null);
   const profitChartRef = useRef(null);
   const topCategoriesRef = useRef(null);
@@ -146,15 +369,23 @@ function Dashboard({ onNavigate }) {
     (async () => {
       const Apex = (await import("apexcharts")).default;
       if (cancelled) return;
-      const days = Array.from({ length: 90 }, (_, index) => `Day ${index + 1}`);
-      const series = (start) =>
-        days.map((_, index) =>
+      const { isHourly, labels, rangeDays } = getDashboardRange(
+        salesFromDate,
+        salesToDate,
+      );
+      const rangeScale = isHourly
+        ? 1
+        : Math.max(0.55, Math.min(1.65, rangeDays / 30));
+      const series = (start, phase = 0) =>
+        labels.map((_, index) =>
           Math.max(
             0,
             Math.round(
-              start +
-                Math.sin(index / 5) * start * 0.18 +
-                Math.random() * start * 0.12,
+              start *
+                rangeScale *
+                (1 +
+                  Math.sin((index + phase) / 5) * 0.18 +
+                  Math.cos((index + phase) / 9) * 0.08),
             ),
           ),
         );
@@ -172,17 +403,25 @@ function Dashboard({ onNavigate }) {
         dataLabels: { enabled: false },
         tooltip: { theme: "light" },
         xaxis: {
-          categories: days,
-          tickAmount: 8,
-          labels: { rotate: -45, rotateAlways: true },
+          categories: labels,
+          tickAmount: isHourly
+            ? 8
+            : Math.min(8, Math.max(2, Math.round(rangeDays / 7))),
+          labels: { rotate: isHourly ? 0 : -45, rotateAlways: !isHourly },
         },
         yaxis: { tickAmount: 4 },
       });
       const options = [
-        area("Sales", series(12000), "var(--color-primary)"),
-        area("Profit", series(3000), "var(--color-primary-dark)"),
+        area("Sales", series(12000, 0), "var(--color-primary)"),
+        area("Profit", series(3000, 2), "var(--color-primary-dark)"),
         {
-          series: [{ data: [1720, 1480, 1320, 1120, 980] }],
+          series: [
+            {
+              data: [1720, 1480, 1320, 1120, 980].map((value, index) =>
+                Math.round(value * rangeScale * (1 + index * 0.04)),
+              ),
+            },
+          ],
           chart: {
             id: "top-categories-chart",
             type: "bar",
@@ -219,7 +458,10 @@ function Dashboard({ onNavigate }) {
           },
         },
         {
-          series: [64, 36],
+          series: [
+            Math.round(58 + Math.sin(rangeDays / 11) * 8),
+            Math.round(42 - Math.sin(rangeDays / 11) * 8),
+          ],
           chart: { type: "donut", height: 240, toolbar: { show: false } },
           labels: ["Cash", "Online"],
           colors: ["var(--color-primary)", "rgba(20, 184, 166, 0.38)"],
@@ -235,7 +477,14 @@ function Dashboard({ onNavigate }) {
           },
         },
         {
-          series: [{ name: "Sales", data: [2020, 1840, 1600, 1430, 1280] }],
+          series: [
+            {
+              name: "Sales",
+              data: [2020, 1840, 1600, 1430, 1280].map((value, index) =>
+                Math.round(value * rangeScale * (1 - index * 0.03)),
+              ),
+            },
+          ],
           chart: { type: "bar", height: 240, toolbar: { show: false } },
           colors: ["var(--color-primary)"],
           plotOptions: { bar: { borderRadius: 12, columnWidth: "50%" } },
@@ -263,7 +512,7 @@ function Dashboard({ onNavigate }) {
         if (element) element.innerHTML = "";
       });
     };
-  }, []);
+  }, [salesFromDate, salesToDate]);
 
   const pageSize = 5;
   const pageCount = Math.ceil(stockInfoRows.length / pageSize);
@@ -273,15 +522,52 @@ function Dashboard({ onNavigate }) {
   );
   const first = stockPage * pageSize + 1;
   const last = Math.min((stockPage + 1) * pageSize, stockInfoRows.length);
+  const salesRange = getDashboardRange(salesFromDate, salesToDate);
+  const metricScale = salesRange.rangeDays / 90;
+  const periodLabel =
+    salesFromDate || salesToDate ? "Selected date range" : "Last 90 days";
+  const filteredPerformanceCards = performanceCards.map((card) => {
+    const baseValues = {
+      "Total Orders": 1240,
+      "Total Sales": 38400,
+      "Net Profit": 9100,
+      "Items Sold": 562,
+    };
+    const value = Math.max(0, Math.round(baseValues[card.label] * metricScale));
+    const formattedValue =
+      card.label.includes("Sales") || card.label === "Net Profit"
+        ? `PKR ${(value / 1000).toFixed(1)}K`
+        : value.toLocaleString();
+
+    return {
+      ...card,
+      value: formattedValue,
+      detail: `${periodLabel}`,
+    };
+  });
 
   return (
     <div className="dashboard-screen">
       <section className="dashboard-section">
-        <div className="dashboard-section__header">
+        <div className="dashboard-section__header dashboard-section__header--sales">
           <p className="dashboard-section__title">Sales Performance</p>
+          <div className="dashboard-section__date-filters">
+            <DashboardDatePicker
+              label="From"
+              value={salesFromDate}
+              max={salesToDate}
+              onChange={setSalesFromDate}
+            />
+            <DashboardDatePicker
+              label="To"
+              value={salesToDate}
+              min={salesFromDate}
+              onChange={setSalesToDate}
+            />
+          </div>
         </div>
         <div className="dashboard-section__cards dashboard-section__cards--metrics">
-          {performanceCards.map((card) => (
+          {filteredPerformanceCards.map((card) => (
             <div
               key={card.label}
               className="dashboard-card dashboard-card--metric"
