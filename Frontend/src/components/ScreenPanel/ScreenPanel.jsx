@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import Dashboard from "../Dashboard/Dashboard";
+import Inventory from "../Inventory/Inventory";
 import POS from "../POS/POS";
 import Sales from "../Sales/Sales";
 import Reports from "../Reports/Reports";
@@ -24,6 +25,8 @@ function ScreenPanel({
     screenContent = (
       <POS onNotify={onNotify} onInvoiceCreated={onInvoiceCreated} />
     );
+  } else if (title === "Inventory") {
+    screenContent = <Inventory onNotify={onNotify} />;
   } else if (title === "Sales") {
     screenContent = (
       <Sales
