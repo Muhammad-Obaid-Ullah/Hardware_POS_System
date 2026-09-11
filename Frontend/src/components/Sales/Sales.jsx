@@ -5,7 +5,6 @@ import {
   LuCalendarDays,
   LuChevronLeft,
   LuChevronRight,
-  LuCreditCard,
   LuDownload,
   LuMinus,
   LuPencil,
@@ -15,6 +14,7 @@ import {
   LuSearch,
   LuTrash2,
   LuUndo2,
+  LuUndoDot,
   LuSave,
   LuX,
 } from "react-icons/lu";
@@ -363,14 +363,7 @@ function getDateKey(dateValue) {
   return `${year}-${month}-${day}`;
 }
 
-function InvoiceReceipt({
-  invoice,
-  onClose,
-  onDelete,
-  onRestore,
-  onRefund,
-  onPartiallyRefund,
-}) {
+function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftItems, setDraftItems] = useState(invoice.items);
 
@@ -461,27 +454,7 @@ function InvoiceReceipt({
           >
             <LuPrinter aria-hidden="true" />
           </button>
-          {invoice.deleted ? (
-            <button
-              type="button"
-              onClick={() => onRestore(invoice.number)}
-              aria-label="Restore invoice"
-              title="Restore invoice"
-            >
-              <LuRotateCcw aria-hidden="true" />
-            </button>
-          ) : !invoice.refunded ? (
-            <button
-              type="button"
-              className="sales-invoice-paper__delete"
-              onClick={() => onDelete(invoice.number)}
-              aria-label="Delete invoice"
-              title="Delete invoice"
-            >
-              <LuTrash2 aria-hidden="true" />
-            </button>
-          ) : null}
-          {!invoice.deleted && !invoice.refunded && !isEditing && (
+          {!invoice.refunded && !isEditing && (
             <button
               type="button"
               onClick={() => setIsEditing(true)}
@@ -491,7 +464,7 @@ function InvoiceReceipt({
               <LuPencil aria-hidden="true" />
             </button>
           )}
-          {isEditing && !invoice.deleted && (
+          {isEditing && (
             <button
               type="button"
               onClick={savePartialRefund}
@@ -501,7 +474,7 @@ function InvoiceReceipt({
               <LuSave aria-hidden="true" />
             </button>
           )}
-          {!invoice.deleted && !invoice.refunded && !isEditing && (
+          {!invoice.refunded && !isEditing && (
             <button
               type="button"
               className="sales-invoice-paper__refund"
@@ -585,20 +558,13 @@ function InvoiceReceipt({
           )}
         </div>
         <AnimatePresence initial={false}>
-          {(invoice.deleted ||
-            invoice.refunded ||
-            invoice.partiallyRefunded) && (
+          {(invoice.refunded || invoice.partiallyRefunded) && (
             <motion.div
               className="sales-invoice-paper__status-flags"
               initial={{ opacity: 0, y: 6, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.96 }}
             >
-              {invoice.deleted && (
-                <motion.span layout className="sales-deleted-badge">
-                  Deleted
-                </motion.span>
-              )}
               {invoice.refunded && (
                 <motion.span layout className="sales-refunded-badge">
                   Refunded
@@ -619,8 +585,6 @@ function InvoiceReceipt({
 
 function Sales({
   invoices = [],
-  onInvoiceDeleted,
-  onInvoiceRestored,
   onInvoiceRefunded,
   onInvoicePartiallyRefunded,
 }) {
@@ -628,7 +592,6 @@ function Sales({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [deletedInvoiceNumbers, setDeletedInvoiceNumbers] = useState([]);
   const [refundedInvoiceNumbers, setRefundedInvoiceNumbers] = useState([]);
   const [partialRefunds, setPartialRefunds] = useState({});
   const allInvoices = useMemo(
@@ -636,8 +599,6 @@ function Sales({
       [...invoices, ...dummyInvoices].map((invoice) => ({
         ...invoice,
         ...(partialRefunds[invoice.number] ?? {}),
-        deleted:
-          invoice.deleted || deletedInvoiceNumbers.includes(invoice.number),
         refunded:
           invoice.refunded || refundedInvoiceNumbers.includes(invoice.number),
         partiallyRefunded:
@@ -648,37 +609,8 @@ function Sales({
             invoice.partiallyRefunded ??
             false),
       })),
-    [deletedInvoiceNumbers, invoices, partialRefunds, refundedInvoiceNumbers],
+    [invoices, partialRefunds, refundedInvoiceNumbers],
   );
-  const deleteInvoice = (invoiceNumber) => {
-    if (
-      allInvoices.some(
-        (invoice) => invoice.number === invoiceNumber && invoice.refunded,
-      )
-    ) {
-      return;
-    }
-    setDeletedInvoiceNumbers((numbers) =>
-      numbers.includes(invoiceNumber) ? numbers : [...numbers, invoiceNumber],
-    );
-    onInvoiceDeleted?.(invoiceNumber);
-    setSelectedInvoice((invoice) =>
-      invoice?.number === invoiceNumber
-        ? { ...invoice, deleted: true }
-        : invoice,
-    );
-  };
-  const restoreInvoice = (invoiceNumber) => {
-    setDeletedInvoiceNumbers((numbers) =>
-      numbers.filter((number) => number !== invoiceNumber),
-    );
-    onInvoiceRestored?.(invoiceNumber);
-    setSelectedInvoice((invoice) =>
-      invoice?.number === invoiceNumber
-        ? { ...invoice, deleted: false }
-        : invoice,
-    );
-  };
   const refundInvoice = (invoiceNumber) => {
     setRefundedInvoiceNumbers((numbers) =>
       numbers.includes(invoiceNumber) ? numbers : [...numbers, invoiceNumber],
@@ -792,129 +724,96 @@ function Sales({
                 }
               }}
             >
-              <span className="sales-invoice-row__icon">
-                <LuReceiptText aria-hidden="true" />
-              </span>
-              <motion.span className="sales-invoice-row__main" layout>
-                <span className="sales-invoice-row__number">
-                  <strong>INV-{invoice.number}</strong>
+              <div className="sales-invoice-row__header">
+                <span className="sales-invoice-row__icon">
+                  <LuReceiptText aria-hidden="true" />
                 </span>
-                <span className="sales-invoice-row__date">
-                  {invoice.date} at {invoice.time}
-                  <AnimatePresence initial={false} mode="popLayout">
-                    <motion.span className="sales-invoice-row__status" layout>
-                      {invoice.deleted && (
-                        <motion.span
-                          layout
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="sales-deleted-badge"
-                        >
-                          Deleted
-                        </motion.span>
-                      )}
-                      {invoice.refunded && (
-                        <motion.span
-                          layout
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="sales-refunded-badge"
-                        >
-                          Refunded
-                        </motion.span>
-                      )}
-                      {invoice.partiallyRefunded && (
-                        <motion.span
-                          layout
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="sales-partial-refunded-badge"
-                        >
-                          Partially-refunded
-                        </motion.span>
-                      )}
-                    </motion.span>
-                  </AnimatePresence>
+                <motion.span className="sales-invoice-row__main" layout>
+                  <span className="sales-invoice-row__number">
+                    <strong>INV-{invoice.number}</strong>
+                  </span>
+                  <span className="sales-invoice-row__date">
+                    {invoice.date} at {invoice.time}
+                  </span>
+                </motion.span>
+                <motion.div className="sales-invoice-row__actions" layout>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      downloadInvoice(invoice);
+                    }}
+                    aria-label={`Download invoice ${invoice.number}`}
+                    title="Download invoice"
+                  >
+                    <LuDownload aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      printInvoice(invoice);
+                    }}
+                    aria-label={`Print invoice ${invoice.number}`}
+                    title="Print invoice"
+                  >
+                    <LuPrinter aria-hidden="true" />
+                  </button>
+                  {!invoice.refunded && (
+                    <button
+                      type="button"
+                      className="sales-invoice-row__refund"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        refundInvoice(invoice.number);
+                      }}
+                      aria-label={`Refund invoice ${invoice.number}`}
+                      title="Refund invoice"
+                    >
+                      <LuUndo2 aria-hidden="true" />
+                    </button>
+                  )}
+                </motion.div>
+              </div>
+              <div className="sales-invoice-row__tags">
+                <AnimatePresence initial={false} mode="popLayout">
+                  <motion.span className="sales-invoice-row__status" layout>
+                    {invoice.refunded && (
+                      <motion.span
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="sales-refunded-badge"
+                      >
+                        <LuRotateCcw aria-hidden="true" />
+                        Refunded
+                      </motion.span>
+                    )}
+                    {invoice.partiallyRefunded && (
+                      <motion.span
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="sales-partial-refunded-badge"
+                      >
+                        <LuUndoDot aria-hidden="true" />
+                        Partially-refunded
+                      </motion.span>
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              <div className="sales-invoice-row__footer">
+                <span className="sales-invoice-row__total">
+                  {formatMoney(invoice.total)}
                 </span>
-              </motion.span>
-              <motion.div className="sales-invoice-row__actions" layout>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    downloadInvoice(invoice);
-                  }}
-                  aria-label={`Download invoice ${invoice.number}`}
-                  title="Download invoice"
-                >
-                  <LuDownload aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    printInvoice(invoice);
-                  }}
-                  aria-label={`Print invoice ${invoice.number}`}
-                  title="Print invoice"
-                >
-                  <LuPrinter aria-hidden="true" />
-                </button>
-                {invoice.deleted ? (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      restoreInvoice(invoice.number);
-                    }}
-                    aria-label={`Restore invoice ${invoice.number}`}
-                    title="Restore invoice"
-                  >
-                    <LuRotateCcw aria-hidden="true" />
-                  </button>
-                ) : !invoice.refunded ? (
-                  <button
-                    type="button"
-                    className="sales-invoice-row__delete"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteInvoice(invoice.number);
-                    }}
-                    aria-label={`Delete invoice ${invoice.number}`}
-                    title="Delete invoice"
-                  >
-                    <LuTrash2 aria-hidden="true" />
-                  </button>
-                ) : null}
-                {!invoice.deleted && !invoice.refunded && (
-                  <button
-                    type="button"
-                    className="sales-invoice-row__refund"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      refundInvoice(invoice.number);
-                    }}
-                    aria-label={`Refund invoice ${invoice.number}`}
-                    title="Refund invoice"
-                  >
-                    <LuUndo2 aria-hidden="true" />
-                  </button>
-                )}
-              </motion.div>
-              <span className="sales-invoice-row__payment">
-                <LuCreditCard aria-hidden="true" />
-                {invoice.paymentMethod === "online" ? "Online" : "Cash"}
-              </span>
-              <span className="sales-invoice-row__total">
-                {formatMoney(invoice.total)}
-              </span>
-              <LuChevronRight
-                className="sales-invoice-row__arrow"
-                aria-hidden="true"
-              />
+                <LuChevronRight
+                  className="sales-invoice-row__arrow"
+                  aria-hidden="true"
+                />
+              </div>
             </motion.div>
           ))
         )}
@@ -922,11 +821,9 @@ function Sales({
       <AnimatePresence>
         {selectedInvoice && (
           <InvoiceReceipt
-            key={`${selectedInvoice.number}-${selectedInvoice.total}-${selectedInvoice.refunded}-${selectedInvoice.partiallyRefunded}-${selectedInvoice.deleted}-${selectedInvoice.items.map((item) => `${item.id}:${item.quantity}`).join(",")}`}
+            key={`${selectedInvoice.number}-${selectedInvoice.total}-${selectedInvoice.refunded}-${selectedInvoice.partiallyRefunded}-${selectedInvoice.items.map((item) => `${item.id}:${item.quantity}`).join(",")}`}
             invoice={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
-            onDelete={deleteInvoice}
-            onRestore={restoreInvoice}
             onRefund={refundInvoice}
             onPartiallyRefund={partiallyRefundInvoice}
           />
