@@ -50,7 +50,7 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
                 <h2 className="login-title">Sign in to your dashboard</h2>
               </div>
 
-              <form onSubmit={onSubmit} className="login-form">
+              <form onSubmit={onSubmit} className="login-form" noValidate>
                 <label className="form-field">
                   <span className="field-label">Your Email</span>
                   <input
@@ -60,7 +60,6 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
                     onChange={onChange}
                     placeholder="name@example.com"
                     autoComplete="email"
-                    required
                     className="form-input"
                   />
                 </label>
@@ -75,7 +74,6 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
                       onChange={onChange}
                       placeholder="••••••••"
                       autoComplete="current-password"
-                      required
                       className="form-input"
                     />
                     <button

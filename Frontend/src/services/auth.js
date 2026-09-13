@@ -1,52 +1,34 @@
-const DEMO_CREDENTIALS = {
-  email: "admin@hardware.com",
-  password: "demo1234",
-};
-
 export async function loginUser(credentials) {
-  try {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
-    });
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(credentials),
+  });
+  const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error("Unable to sign in right now.");
-    }
-
-    const data = await response.json();
-
-    if (data.token) {
-      localStorage.setItem("pos_token", data.token);
-    }
-
-    return data;
-  } catch (error) {
-    if (
-      credentials.email === DEMO_CREDENTIALS.email &&
-      credentials.password === DEMO_CREDENTIALS.password
-    ) {
-      const demoToken = "demo-jwt-token";
-      localStorage.setItem("pos_token", demoToken);
-      return {
-        token: demoToken,
-        user: {
-          email: credentials.email,
-          role: "admin",
-          name: "Demo Admin",
-        },
-      };
-    }
-
-    throw error;
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to sign in right now.");
   }
+
+  return data;
 }
 
-export function logoutUser() {
-  localStorage.removeItem("pos_token");
+export async function getCurrentUser() {
+  const response = await fetch("/api/auth/session", {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json();
 }
 
-export function getStoredToken() {
-  return localStorage.getItem("pos_token");
+export async function logoutUser() {
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
 }

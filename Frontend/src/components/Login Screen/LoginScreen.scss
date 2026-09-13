@@ -189,17 +189,6 @@
   letter-spacing: -0.02em;
 }
 
-.error-banner {
-  padding: 10px 12px;
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  background: var(--color-gray-100);
-  color: var(--color-danger);
-  border-radius: 10px;
-  font-size: 0.9rem;
-  margin: 2px 0 0;
-  overflow: hidden;
-}
-
 .login-form {
   display: flex;
   flex-direction: column;

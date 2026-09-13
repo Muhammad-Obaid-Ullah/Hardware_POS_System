@@ -10,6 +10,7 @@ import {
 } from "./middlewares/errorMiddleware.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.get("/", (request, response) => {
 });
 
 app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
 
 app.use(notFoundHandler);

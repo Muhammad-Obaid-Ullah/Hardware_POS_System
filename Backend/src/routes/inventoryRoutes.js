@@ -6,9 +6,11 @@ import {
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { body } from "express-validator";
 import { validateRequest } from "../middlewares/validationMiddleware.js";
+import { requireAuth } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
+router.use(requireAuth);
 router.get("/", asyncHandler(listInventoryItems));
 router.post(
   "/",

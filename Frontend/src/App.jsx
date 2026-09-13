@@ -4,21 +4,19 @@ import LoginScreen from "./components/Login Screen/LoginScreen";
 import NotificationStack from "./components/Notifications/NotificationBanner";
 import Sidebar from "./components/Sidebar/Sidebar";
 import ScreenPanel from "./components/ScreenPanel/ScreenPanel";
-import { getStoredToken, loginUser, logoutUser } from "./services/auth";
+import { getCurrentUser, loginUser, logoutUser } from "./services/auth";
 import "./App.scss";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    Boolean(getStoredToken()),
-  );
-  const demoCredentials = useMemo(
-    () => ({ email: "admin@hardware.com", password: "demo1234" }),
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
+  const defaultCredentials = useMemo(
+    () => ({ email: "admin@pos.com", password: "admin@1234" }),
     [],
   );
-  const [formValues, setFormValues] = useState(demoCredentials);
+  const [formValues, setFormValues] = useState(defaultCredentials);
   const [loading, setLoading] = useState(false);
   const [activeScreen, setActiveScreen] = useState("Dashboard");
-  const [error, setError] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
@@ -49,15 +47,35 @@ function App() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
-    setError("");
+
+    if (!formValues.email || !formValues.email.includes("@")) {
+      pushNotification("Enter a valid email address.", {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!formValues.password) {
+      pushNotification("Password is required.", {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
-      await loginUser({
+      const session = await loginUser({
         email: formValues.email,
         password: formValues.password,
       });
       setActiveScreen("Dashboard");
       setIsAuthenticated(true);
+      setSessionExpiresAt(session.expiresAt);
       pushNotification("Signed in successfully", {
         icon: (
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -66,26 +84,18 @@ function App() {
         ),
       });
     } catch (loginError) {
-      setError(
-        loginError.message ||
-          "Invalid email or password. Use the demo credentials to continue.",
-      );
-      pushNotification(
-        loginError.message ||
-          "Invalid email or password. Use the demo credentials to continue.",
-        {
-          textColor: "#64748b",
-          iconColor: "#dc2626",
-          progressColor: "#dc2626",
-          icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 8v5" />
-              <path d="M12 16h.01" />
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-            </svg>
-          ),
-        },
-      );
+      pushNotification(loginError.message || "Invalid email or password.", {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+        icon: (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8v5" />
+            <path d="M12 16h.01" />
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+          </svg>
+        ),
+      });
     } finally {
       setLoading(false);
     }
@@ -98,12 +108,43 @@ function App() {
   };
 
   useEffect(() => {
+    getCurrentUser().then((session) => {
+      setIsAuthenticated(Boolean(session));
+      setSessionExpiresAt(session?.expiresAt ?? null);
+    });
+  }, []);
+
+  useEffect(() => {
     window.scrollTo(0, 0);
     const main = document.querySelector(".app-main");
     if (main) {
       main.scrollTop = 0;
     }
   }, [activeScreen]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    if (!sessionExpiresAt) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(
+      () => {
+        void logoutUser();
+        setIsAuthenticated(false);
+      },
+      Math.max(0, sessionExpiresAt - Date.now()),
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [isAuthenticated, sessionExpiresAt]);
+
+  if (isAuthenticated === null) {
+    return null;
+  }
 
   return (
     <>
@@ -122,7 +163,6 @@ function App() {
               onChange={handleChange}
               onSubmit={handleSubmit}
               loading={loading}
-              error={error}
             />
           </motion.div>
         ) : (
@@ -139,7 +179,8 @@ function App() {
               activeScreen={activeScreen}
               onSelect={setScreen}
               onLogout={() => {
-                logoutUser();
+                void logoutUser();
+                setSessionExpiresAt(null);
                 setIsAuthenticated(false);
                 pushNotification("Signed out successfully", {
                   icon: (
@@ -150,6 +191,7 @@ function App() {
                 });
               }}
             />
+
             <main
               className={`app-main app-main--${activeScreen.toLowerCase()}`}
             >
