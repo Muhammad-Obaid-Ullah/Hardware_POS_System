@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
-import { getSales } from "../../services/sales";
+import { getSales, refundSale } from "../../services/sales";
 import { AnimatePresence, motion } from "motion/react";
 import {
   LuCalendarDays,
+  LuArrowLeftRight,
   LuChevronLeft,
   LuChevronRight,
   LuDownload,
@@ -27,7 +28,7 @@ function getInvoiceMarkup(invoice) {
   const items = invoice.items
     .map(
       (item) =>
-        `<tr><td><strong>${item.name}</strong>${item.variants?.length ? `<small>${item.variants.join(" / ")}</small>` : ""}<small>${formatMoney(item.unitPrice)}</small></td><td>${item.quantity}</td></tr>`,
+        `<tr><td><strong>${item.name}</strong>${item.variants?.length ? `<small>${item.variants.join(" / ")}</small>` : ""}${item.refundedQuantity ? `<small>Refunded ${item.refundedQuantity} of ${item.quantity}</small>` : ""}<small>${formatMoney(item.unitPrice)}</small></td><td>${item.quantity}</td></tr>`,
     )
     .join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>INV-${invoice.number}</title><style>body{font-family:Arial,sans-serif;color:#374151;max-width:430px;margin:32px auto;padding:24px}h1{text-align:center}header{text-align:center;border-bottom:1px dashed #d1d5db;padding-bottom:16px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{text-align:left;padding:9px 0;border-bottom:1px solid #e5e7eb}th:last-child,td:last-child{text-align:right}small{display:block;color:#6b7280;margin-top:4px}.total{display:flex;justify-content:space-between;font-size:18px;font-weight:bold;border-top:1px solid #d1d5db;padding-top:16px}</style></head><body><header><h1>Invoice</h1><div>INV-${invoice.number}</div><div>${invoice.date} at ${invoice.time}</div></header><table><thead><tr><th>Items</th><th>Qty</th></tr></thead><tbody>${items}</tbody></table><div class="total"><span>Total price</span><span>${formatMoney(invoice.total)}</span></div><p>Payment method: <strong>${invoice.paymentMethod === "online" ? "Online" : "Cash"}</strong></p>${invoice.transactionNumber ? `<p>Transaction #${invoice.transactionNumber}</p>` : ""}</body></html>`;
@@ -74,6 +75,16 @@ function downloadInvoice(invoice) {
       const variantLines = pdf.splitTextToSize(item.variants.join(" / "), 48);
       pdf.text(variantLines, margin, y);
       y += variantLines.length * 3;
+    }
+    if (item.refundedQuantity) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(180, 83, 9);
+      pdf.text(
+        `Refunded ${item.refundedQuantity} of ${item.quantity}`,
+        margin,
+        y,
+      );
+      y += 3;
     }
     pdf.setFontSize(8);
     pdf.setTextColor(107, 114, 128);
@@ -376,7 +387,14 @@ function getDateKey(dateValue) {
 
 function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draftItems, setDraftItems] = useState(invoice.items);
+  const [invoiceView, setInvoiceView] = useState(
+    invoice.refunded || invoice.partiallyRefunded ? "refunded" : "original",
+  );
+  const [draftItems, setDraftItems] = useState(() =>
+    invoice.items
+      .filter((item) => item.remainingQuantity > 0)
+      .map((item) => ({ ...item, quantity: item.remainingQuantity })),
+  );
 
   const decreaseItem = (itemId) => {
     setDraftItems((items) =>
@@ -396,7 +414,8 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
       draftItems.some(
         (draftItem) =>
           draftItem.quantity !==
-          invoice.items.find((item) => item.id === draftItem.id)?.quantity,
+          invoice.items.find((item) => item.id === draftItem.id)
+            ?.remainingQuantity,
       );
 
     if (!hasQuantityChanges) {
@@ -405,7 +424,7 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
     }
 
     if (draftItems.length === 0) {
-      onPartiallyRefund(invoice.number, invoice.items, invoice.total, true);
+      onPartiallyRefund(invoice.number, [], 0, true);
       setIsEditing(false);
       return;
     }
@@ -417,6 +436,12 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
     onPartiallyRefund(invoice.number, draftItems, total, false);
     setIsEditing(false);
   };
+
+  const isRefundedView = invoiceView === "refunded";
+  const displayedItems = isRefundedView
+    ? invoice.items.filter((item) => item.remainingQuantity > 0)
+    : invoice.items;
+  const displayedTotal = isRefundedView ? invoice.netTotal : invoice.total;
 
   return (
     <motion.div
@@ -496,6 +521,20 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
               <LuUndo2 aria-hidden="true" />
             </button>
           )}
+          {(invoice.refunded || invoice.partiallyRefunded) && !isEditing && (
+            <button
+              type="button"
+              onClick={() =>
+                setInvoiceView((view) =>
+                  view === "original" ? "refunded" : "original",
+                )
+              }
+              aria-label={`View ${isRefundedView ? "original" : "refunded"} invoice`}
+              title={`View ${isRefundedView ? "original" : "refunded"} invoice`}
+            >
+              <LuArrowLeftRight aria-hidden="true" />
+            </button>
+          )}
         </div>
         <div className="sales-invoice-paper__header">
           <span>Payment receipt</span>
@@ -516,51 +555,74 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
             <span>Qty</span>
           </div>
           <AnimatePresence initial={false} mode="popLayout">
-            {draftItems.map((item) => (
-              <motion.div
-                className="sales-invoice-paper__item"
-                key={item.id}
-                layout
-                initial={{ opacity: 0, height: 0, y: -8 }}
-                animate={{ opacity: 1, height: "auto", y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div>
-                  <strong>{item.name}</strong>
-                  {item.variants?.length > 0 && (
-                    <span>{item.variants.join(" / ")}</span>
-                  )}
-                  <span>{formatMoney(item.unitPrice)}</span>
-                </div>
-                {isEditing ? (
-                  <span className="sales-invoice-paper__edit-controls">
-                    <button
-                      type="button"
-                      onClick={() => decreaseItem(item.id)}
-                      aria-label={`Decrease ${item.name} quantity`}
-                    >
-                      <LuMinus aria-hidden="true" />
-                    </button>
-                    <strong>{item.quantity}</strong>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      aria-label={`Remove ${item.name} from invoice`}
-                    >
-                      <LuTrash2 aria-hidden="true" />
-                    </button>
-                  </span>
-                ) : (
-                  <strong>{item.quantity}</strong>
-                )}
-              </motion.div>
-            ))}
+            {displayedItems.length === 0 && isRefundedView ? (
+              <p className="sales-invoice-paper__empty-items">
+                All invoice items were refunded.
+              </p>
+            ) : (
+              displayedItems.map((originalItem) => {
+                const item = draftItems.find(
+                  (draftItem) => draftItem.id === originalItem.id,
+                );
+                const displayQuantity = isEditing
+                  ? (item?.quantity ?? 0)
+                  : isRefundedView
+                    ? originalItem.remainingQuantity
+                    : originalItem.quantity;
+
+                return (
+                  <motion.div
+                    className="sales-invoice-paper__item"
+                    key={originalItem.id}
+                    layout
+                    initial={{ opacity: 0, height: 0, y: -8 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div>
+                      <strong>{originalItem.name}</strong>
+                      {originalItem.variants?.length > 0 && (
+                        <span>{originalItem.variants.join(" / ")}</span>
+                      )}
+                      <span>{formatMoney(originalItem.unitPrice)}</span>
+                      {!isRefundedView && originalItem.refundedQuantity > 0 && (
+                        <small>
+                          Refunded {originalItem.refundedQuantity} of{" "}
+                          {originalItem.quantity}
+                        </small>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <span className="sales-invoice-paper__edit-controls">
+                        <button
+                          type="button"
+                          onClick={() => decreaseItem(originalItem.id)}
+                          aria-label={`Decrease ${originalItem.name} quantity`}
+                        >
+                          <LuMinus aria-hidden="true" />
+                        </button>
+                        <strong>{displayQuantity}</strong>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(originalItem.id)}
+                          aria-label={`Remove ${originalItem.name} from invoice`}
+                        >
+                          <LuTrash2 aria-hidden="true" />
+                        </button>
+                      </span>
+                    ) : (
+                      <strong>{displayQuantity}</strong>
+                    )}
+                  </motion.div>
+                );
+              })
+            )}
           </AnimatePresence>
         </div>
         <div className="sales-invoice-paper__total">
           <span>Total price</span>
-          <strong>{formatMoney(invoice.total)}</strong>
+          <strong>{formatMoney(displayedTotal)}</strong>
         </div>
         <div className="sales-invoice-paper__payment">
           <span>Payment method</span>
@@ -579,14 +641,14 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.96 }}
             >
-              {invoice.refunded && (
-                <motion.span layout className="sales-refunded-badge">
-                  Refunded
-                </motion.span>
-              )}
               {invoice.partiallyRefunded && (
                 <motion.span layout className="sales-partial-refunded-badge">
-                  Partially-refunded
+                  {isRefundedView ? "Partially-refunded" : "Original invoice"}
+                </motion.span>
+              )}
+              {invoice.refunded && (
+                <motion.span layout className="sales-refunded-badge">
+                  {isRefundedView ? "Refunded" : "Original invoice"}
                 </motion.span>
               )}
             </motion.div>
@@ -604,12 +666,11 @@ function Sales({
   onInvoicePartiallyRefunded,
 }) {
   const [storedInvoices, setStoredInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [refundedInvoiceNumbers, setRefundedInvoiceNumbers] = useState([]);
-  const [partialRefunds, setPartialRefunds] = useState({});
 
   useEffect(() => {
     getSales()
@@ -620,7 +681,8 @@ function Sales({
           iconColor: "#dc2626",
           progressColor: "#dc2626",
         });
-      });
+      })
+      .finally(() => setIsLoading(false));
   }, [onNotify]);
 
   const allInvoices = useMemo(
@@ -632,61 +694,69 @@ function Sales({
         )
         .map((invoice) => ({
           ...invoice,
-          ...(partialRefunds[invoice.number] ?? {}),
-          refunded:
-            invoice.refunded || refundedInvoiceNumbers.includes(invoice.number),
-          partiallyRefunded:
-            !(
-              invoice.refunded ||
-              refundedInvoiceNumbers.includes(invoice.number)
-            ) &&
-            (partialRefunds[invoice.number]?.partiallyRefunded ??
-              invoice.partiallyRefunded ??
-              false),
+          refunded: invoice.refunded ?? false,
+          partiallyRefunded: invoice.partiallyRefunded ?? false,
         })),
-    [invoices, partialRefunds, refundedInvoiceNumbers, storedInvoices],
+    [invoices, storedInvoices],
   );
-  const refundInvoice = (invoiceNumber) => {
-    setRefundedInvoiceNumbers((numbers) =>
-      numbers.includes(invoiceNumber) ? numbers : [...numbers, invoiceNumber],
+  const applyUpdatedSale = (updatedSale) => {
+    setStoredInvoices((current) =>
+      current.some((sale) => sale.number === updatedSale.number)
+        ? current.map((sale) =>
+            sale.number === updatedSale.number ? updatedSale : sale,
+          )
+        : [updatedSale, ...current],
     );
-    setPartialRefunds((current) => ({
-      ...current,
-      [invoiceNumber]: {
-        ...current[invoiceNumber],
-        refunded: true,
-        partiallyRefunded: false,
-      },
-    }));
-    onInvoiceRefunded?.(invoiceNumber);
     setSelectedInvoice((invoice) =>
-      invoice?.number === invoiceNumber
-        ? { ...invoice, refunded: true, partiallyRefunded: false }
-        : invoice,
+      invoice?.number === updatedSale.number ? updatedSale : invoice,
     );
   };
-  const partiallyRefundInvoice = (
-    invoiceNumber,
-    items,
-    total,
-    isFullyRefunded = false,
-  ) => {
-    const update = {
-      items,
-      total,
-      refunded: isFullyRefunded,
-      partiallyRefunded: !isFullyRefunded,
-    };
-    setPartialRefunds((current) => ({ ...current, [invoiceNumber]: update }));
-    if (isFullyRefunded) {
-      setRefundedInvoiceNumbers((numbers) =>
-        numbers.includes(invoiceNumber) ? numbers : [...numbers, invoiceNumber],
-      );
+
+  const refundInvoice = async (invoiceNumber) => {
+    try {
+      const updatedSale = await refundSale(invoiceNumber, []);
+      applyUpdatedSale(updatedSale);
+      onInvoiceRefunded?.(invoiceNumber);
+      onNotify?.(`Invoice INV-${invoiceNumber} was fully refunded.`, {
+        icon: <LuRotateCcw aria-hidden="true" />,
+        iconColor: "#15803d",
+        progressColor: "#22c55e",
+      });
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
     }
-    onInvoicePartiallyRefunded?.(invoiceNumber, items, total, isFullyRefunded);
-    setSelectedInvoice((invoice) =>
-      invoice?.number === invoiceNumber ? { ...invoice, ...update } : invoice,
-    );
+  };
+  const partiallyRefundInvoice = async (invoiceNumber, items) => {
+    try {
+      const updatedSale = await refundSale(invoiceNumber, items);
+      applyUpdatedSale(updatedSale);
+      onInvoicePartiallyRefunded?.(
+        invoiceNumber,
+        updatedSale.items,
+        updatedSale.total,
+        updatedSale.refunded,
+      );
+      onNotify?.(
+        updatedSale.refunded
+          ? `Invoice INV-${invoiceNumber} was fully refunded.`
+          : `Invoice INV-${invoiceNumber} was partially refunded.`,
+        {
+          icon: <LuRotateCcw aria-hidden="true" />,
+          iconColor: "#15803d",
+          progressColor: "#22c55e",
+        },
+      );
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+    }
   };
   const visibleInvoices = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -733,7 +803,11 @@ function Sales({
         <span className="sales-count">{visibleInvoices.length} invoices</span>
       </div>
       <div className="sales-invoice-list">
-        {visibleInvoices.length === 0 ? (
+        {isLoading ? (
+          <div className="sales-empty">
+            <strong>Loading invoices</strong>
+          </div>
+        ) : visibleInvoices.length === 0 ? (
           <div className="sales-empty">
             <LuReceiptText aria-hidden="true" />
             <strong>No invoices found</strong>
@@ -763,14 +837,6 @@ function Sales({
                 <span className="sales-invoice-row__icon">
                   <LuReceiptText aria-hidden="true" />
                 </span>
-                <motion.span className="sales-invoice-row__main" layout>
-                  <span className="sales-invoice-row__number">
-                    <strong>INV-{invoice.number}</strong>
-                  </span>
-                  <span className="sales-invoice-row__date">
-                    {invoice.date} at {invoice.time}
-                  </span>
-                </motion.span>
                 <motion.div className="sales-invoice-row__actions" layout>
                   <button
                     type="button"
@@ -810,6 +876,14 @@ function Sales({
                   )}
                 </motion.div>
               </div>
+              <motion.span className="sales-invoice-row__main" layout>
+                <span className="sales-invoice-row__number">
+                  <strong>INV-{invoice.number}</strong>
+                </span>
+                <span className="sales-invoice-row__date">
+                  {invoice.date} at {invoice.time}
+                </span>
+              </motion.span>
               <div className="sales-invoice-row__tags">
                 <AnimatePresence initial={false} mode="popLayout">
                   <motion.span className="sales-invoice-row__status" layout>

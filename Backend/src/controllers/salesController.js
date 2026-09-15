@@ -1,5 +1,6 @@
 import InventoryItem from "../models/InventoryItem.js";
 import Sale from "../models/Sale.js";
+import mongoose from "mongoose";
 
 export async function listSales(request, response) {
   const sales = await Sale.find().sort({ createdAt: -1 });
@@ -95,5 +96,88 @@ export async function createSale(request, response) {
       success: false,
       message: error.message || "Checkout failed",
     });
+  }
+}
+
+export async function refundSale(request, response) {
+  const { items = [] } = request.body;
+  const requestedQuantities = new Map(
+    items.map((item) => [String(item.inventoryItem), Number(item.quantity)]),
+  );
+  const session = await mongoose.startSession();
+
+  try {
+    let updatedSale;
+    await session.withTransaction(async () => {
+      const sale = await Sale.findOne({
+        number: request.params.number,
+      }).session(session);
+
+      if (!sale) {
+        throw new Error("Invoice not found");
+      }
+
+      if (sale.refunded) {
+        throw new Error("This invoice has already been fully refunded");
+      }
+
+      let refundAmount = 0;
+      for (const saleItem of sale.items) {
+        const currentRemaining =
+          saleItem.quantity - (saleItem.refundedQuantity || 0);
+        const requestedRemaining = requestedQuantities.has(
+          String(saleItem.inventoryItem),
+        )
+          ? requestedQuantities.get(String(saleItem.inventoryItem))
+          : 0;
+
+        if (
+          !Number.isInteger(requestedRemaining) ||
+          requestedRemaining < 0 ||
+          requestedRemaining > currentRemaining
+        ) {
+          throw new Error("Invalid refund quantity requested");
+        }
+
+        const quantityToRefund = currentRemaining - requestedRemaining;
+        if (quantityToRefund === 0) continue;
+
+        const inventoryItem = await InventoryItem.findByIdAndUpdate(
+          saleItem.inventoryItem,
+          { $inc: { stock: quantityToRefund } },
+          { new: true, session },
+        );
+
+        if (!inventoryItem) {
+          throw new Error(`Inventory item ${saleItem.name} no longer exists`);
+        }
+
+        saleItem.refundedQuantity =
+          (saleItem.refundedQuantity || 0) + quantityToRefund;
+        refundAmount += quantityToRefund * saleItem.unitPrice;
+      }
+
+      if (refundAmount === 0) {
+        throw new Error("No new items were selected for refund");
+      }
+
+      sale.refundedTotal = (sale.refundedTotal || 0) + refundAmount;
+      const remainingQuantity = sale.items.reduce(
+        (sum, item) => sum + item.quantity - (item.refundedQuantity || 0),
+        0,
+      );
+      sale.refunded = remainingQuantity === 0;
+      sale.partiallyRefunded = !sale.refunded;
+      updatedSale = await sale.save({ session });
+    });
+
+    response.json({ success: true, data: updatedSale });
+  } catch (error) {
+    response.status(400).json({
+      success: false,
+      message: error.message || "Refund failed",
+    });
+  } finally {
+    await session.endSession();
   }
 }

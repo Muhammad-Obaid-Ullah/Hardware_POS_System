@@ -12,10 +12,16 @@ function normalizeSale(sale) {
       minute: "2-digit",
       hour12: true,
     }),
+    refundedTotal: sale.refundedTotal ?? 0,
+    netTotal: Math.max(0, sale.total - (sale.refundedTotal ?? 0)),
     items: sale.items.map((item) => ({
       ...item,
       id: item.inventoryItem,
       variants: Array.isArray(item.variants) ? item.variants : [],
+      remainingQuantity: Math.max(
+        0,
+        item.quantity - (item.refundedQuantity ?? 0),
+      ),
     })),
   };
 }
@@ -47,6 +53,19 @@ export async function createSale(sale) {
   const data = await request("", {
     method: "POST",
     body: JSON.stringify(sale),
+  });
+  return normalizeSale(data.data);
+}
+
+export async function refundSale(number, items) {
+  const data = await request(`/${number}/refund`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      items: items.map((item) => ({
+        inventoryItem: item.inventoryItem ?? item.id,
+        quantity: item.quantity,
+      })),
+    }),
   });
   return normalizeSale(data.data);
 }
