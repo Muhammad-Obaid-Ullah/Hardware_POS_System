@@ -20,9 +20,17 @@ import {
 } from "react-icons/lu";
 import { MdProductionQuantityLimits } from "react-icons/md";
 import { RiDropdownList } from "react-icons/ri";
+import {
+  adjustInventoryStock,
+  createInventoryItem,
+  deleteInventoryItem,
+  getInventoryItems,
+  updateInventoryItem,
+} from "../../services/inventory";
 import "../POS/POS.scss";
 import "./Inventory.scss";
 
+/*
 const initialInventoryItems = [
   {
     id: 1,
@@ -469,6 +477,7 @@ const initialInventoryItems = [
   ...item,
   minimumThreshold: Math.max(3, Math.ceil(item.stock * 0.25)),
 }));
+*/
 
 function getInventoryStatus(stock, threshold) {
   if (stock === 0) {
@@ -686,7 +695,8 @@ function InventoryFormSelect({
 }
 
 function Inventory({ onNotify }) {
-  const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -708,6 +718,18 @@ function Inventory({ onNotify }) {
     stock: "",
     variants: "",
   });
+  useEffect(() => {
+    getInventoryItems()
+      .then(setInventoryItems)
+      .catch((error) => {
+        onNotify?.(error.message, {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        });
+      })
+      .finally(() => setIsLoading(false));
+  }, [onNotify]);
 
   const brands = useMemo(
     () =>
@@ -778,7 +800,7 @@ function Inventory({ onNotify }) {
       sellingPrice: item.price ?? "",
       minimumThreshold: item.minimumThreshold ?? "",
       stock: item.stock ?? "",
-      variants: item.variants.join("\n"),
+      variants: (item.variants || []).join("\n"),
     });
     setIsAddItemOpen(true);
   };
@@ -803,24 +825,49 @@ function Inventory({ onNotify }) {
     setRestockAmount("");
   };
 
-  const applyStockAdjustment = (event) => {
+  const applyStockAdjustment = async (event) => {
     event.preventDefault();
     const amount = Number(restockAmount);
 
-    if (!restockItem || !Number.isFinite(amount) || amount === 0) return;
+    if (!restockItem || !Number.isFinite(amount) || amount === 0) {
+      onNotify?.("Enter a non-zero stock adjustment.", {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+      return;
+    }
 
-    const finalStock = Math.max(0, restockItem.stock + amount);
-    setInventoryItems((items) =>
-      items.map((item) =>
-        item.id === restockItem.id ? { ...item, stock: finalStock } : item,
-      ),
-    );
-    onNotify?.(`${restockItem.name} stock is now ${finalStock}.`, {
-      icon: <LuPackagePlus aria-hidden="true" />,
-      iconColor: "#0f766e",
-      progressColor: "#14b8a6",
-    });
-    closeRestockModal();
+    if (amount < -restockItem.stock) {
+      onNotify?.(
+        `Cannot remove more than the current stock of ${restockItem.stock}.`,
+        {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        },
+      );
+      return;
+    }
+
+    try {
+      const updatedItem = await adjustInventoryStock(restockItem.id, amount);
+      setInventoryItems((items) =>
+        items.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+      );
+      onNotify?.(`${updatedItem.name} stock is now ${updatedItem.stock}.`, {
+        icon: <LuPackagePlus aria-hidden="true" />,
+        iconColor: "#0f766e",
+        progressColor: "#14b8a6",
+      });
+      closeRestockModal();
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+    }
   };
 
   const enterEditMode = (event) => {
@@ -829,21 +876,40 @@ function Inventory({ onNotify }) {
     setModalMode("edit");
   };
 
-  const handleSaveItem = (event) => {
+  const handleSaveItem = async (event) => {
     event.preventDefault();
     const stock = Number(itemForm.stock) || 0;
     const minimumThreshold = Number(itemForm.minimumThreshold) || 0;
-    const brand = newBrand.trim() || itemForm.brand;
-    const category = newCategory.trim() || itemForm.category;
+    const brand =
+      newBrand.trim() ||
+      (itemForm.brand === "__create__" ? "" : itemForm.brand);
+    const category =
+      newCategory.trim() ||
+      (itemForm.category === "__create__" ? "" : itemForm.category);
 
-    if (!itemForm.name.trim() || !brand || !category) return;
+    if (
+      !itemForm.name.trim() ||
+      !category ||
+      itemForm.purchasingPrice === "" ||
+      itemForm.sellingPrice === ""
+    ) {
+      onNotify?.(
+        "Item name, category, purchasing price, and selling price are required.",
+        {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        },
+      );
+      return;
+    }
 
     const itemData = {
       name: itemForm.name.trim(),
-      brand,
+      brand: brand || null,
       category,
-      price: Number(itemForm.sellingPrice) || 0,
-      purchasingPrice: Number(itemForm.purchasingPrice) || 0,
+      purchasingPrice: Number(itemForm.purchasingPrice),
+      sellingPrice: Number(itemForm.sellingPrice),
       stock,
       minimumThreshold,
       variants: itemForm.variants
@@ -852,36 +918,55 @@ function Inventory({ onNotify }) {
         .filter(Boolean),
     };
 
-    setInventoryItems((items) =>
-      modalMode === "edit"
-        ? items.map((item) =>
-            item.id === selectedItemId ? { ...item, ...itemData } : item,
-          )
-        : [...items, { id: Date.now(), ...itemData }],
-    );
-    onNotify?.(
-      modalMode === "edit"
-        ? `${itemData.name} was updated successfully.`
-        : `${itemData.name} was added successfully.`,
-      {
-        icon: <LuCircleCheck aria-hidden="true" />,
-        iconColor: "#15803d",
-        progressColor: "#22c55e",
-      },
-    );
-    closeAddItemModal();
+    try {
+      const savedItem =
+        modalMode === "edit"
+          ? await updateInventoryItem(selectedItemId, itemData)
+          : await createInventoryItem(itemData);
+      setInventoryItems((items) =>
+        modalMode === "edit"
+          ? items.map((item) => (item.id === savedItem.id ? savedItem : item))
+          : [savedItem, ...items],
+      );
+      onNotify?.(
+        modalMode === "edit"
+          ? `${savedItem.name} was updated successfully.`
+          : `${savedItem.name} was added successfully.`,
+        {
+          icon: <LuCircleCheck aria-hidden="true" />,
+          iconColor: "#15803d",
+          progressColor: "#22c55e",
+        },
+      );
+      closeAddItemModal();
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+    }
   };
 
-  const handleDeleteItem = (event, item) => {
+  const handleDeleteItem = async (event, item) => {
     event.stopPropagation();
-    setInventoryItems((items) =>
-      items.filter((current) => current.id !== item.id),
-    );
-    onNotify?.(`${item.name} was deleted.`, {
-      icon: <LuTrash2 aria-hidden="true" />,
-      iconColor: "#dc2626",
-      progressColor: "#ef4444",
-    });
+    try {
+      await deleteInventoryItem(item.id);
+      setInventoryItems((items) =>
+        items.filter((current) => current.id !== item.id),
+      );
+      onNotify?.(`${item.name} was deleted.`, {
+        icon: <LuTrash2 aria-hidden="true" />,
+        iconColor: "#dc2626",
+        progressColor: "#ef4444",
+      });
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+    }
   };
 
   const filteredItems = useMemo(() => {
@@ -962,7 +1047,11 @@ function Inventory({ onNotify }) {
       </div>
 
       <div className="inventory-grid">
-        {filteredItems.length === 0 ? (
+        {isLoading ? (
+          <div className="inventory-empty">
+            <strong>Loading inventory</strong>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="inventory-empty">
             <LuSearch aria-hidden="true" />
             <strong>No items found</strong>
@@ -1123,6 +1212,7 @@ function Inventory({ onNotify }) {
             <form
               className={`inventory-form ${modalMode === "view" ? "inventory-form--readonly" : ""}`}
               onSubmit={handleSaveItem}
+              noValidate
             >
               <div className="inventory-form__select-row">
                 <InventoryFormSelect
@@ -1203,6 +1293,7 @@ function Inventory({ onNotify }) {
                     Purchasing Price (PKR)
                   </span>
                   <input
+                    required
                     min="0"
                     type="number"
                     value={itemForm.purchasingPrice}
@@ -1239,7 +1330,6 @@ function Inventory({ onNotify }) {
                     Minimum Threshold
                   </span>
                   <input
-                    required
                     min="0"
                     type="number"
                     value={itemForm.minimumThreshold}
@@ -1344,6 +1434,7 @@ function Inventory({ onNotify }) {
             <form
               className="inventory-restock-form"
               onSubmit={applyStockAdjustment}
+              noValidate
             >
               <label className="inventory-form-field">
                 <span className="inventory-form-field__label">
@@ -1353,9 +1444,22 @@ function Inventory({ onNotify }) {
                 <input
                   autoFocus
                   required
+                  min={-restockItem.stock}
                   type="number"
                   value={restockAmount}
-                  onChange={(event) => setRestockAmount(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    const amount = Number(value);
+
+                    if (value !== "" && Number.isFinite(amount)) {
+                      setRestockAmount(
+                        String(Math.max(amount, -restockItem.stock)),
+                      );
+                      return;
+                    }
+
+                    setRestockAmount(value);
+                  }}
                   placeholder="Enter a positive or negative amount"
                 />
                 <small className="inventory-restock-form__hint">

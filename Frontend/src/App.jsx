@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import LoginScreen from "./components/Login Screen/LoginScreen";
 import NotificationStack from "./components/Notifications/NotificationBanner";
@@ -20,7 +20,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
-  const pushNotification = (message, options = {}) => {
+  const pushNotification = useCallback((message, options = {}) => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const notification = {
       id,
@@ -33,7 +33,7 @@ function App() {
     };
 
     setNotifications((current) => [...current, notification]);
-  };
+  }, []);
 
   const handleCloseNotification = (id) => {
     setNotifications((current) => current.filter((item) => item.id !== id));

@@ -1,7 +1,10 @@
 import { Router } from "express";
 import {
+  adjustInventoryStock,
   createInventoryItem,
+  deleteInventoryItem,
   listInventoryItems,
+  updateInventoryItem,
 } from "../controllers/inventoryController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { body } from "express-validator";
@@ -12,6 +15,9 @@ const router = Router();
 
 router.use(requireAuth);
 router.get("/", asyncHandler(listInventoryItems));
+router.patch("/:id/stock", asyncHandler(adjustInventoryStock));
+router.patch("/:id", asyncHandler(updateInventoryItem));
+router.delete("/:id", asyncHandler(deleteInventoryItem));
 router.post(
   "/",
   [
@@ -24,6 +30,7 @@ router.post(
       .isFloat({ min: 0 })
       .withMessage("Selling price must be non-negative"),
     body("minimumThreshold")
+      .optional()
       .isInt({ min: 0 })
       .withMessage("Minimum threshold must be non-negative"),
     body("stock")
