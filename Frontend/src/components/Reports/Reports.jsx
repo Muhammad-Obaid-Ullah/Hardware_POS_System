@@ -11,11 +11,14 @@ import {
   LuX,
 } from "react-icons/lu";
 import { TbReportAnalytics } from "react-icons/tb";
+import { getSales } from "../../services/sales";
 import "../Sales/Sales.scss";
 import "./Reports.scss";
 
 const formatMoney = (amount) => `PKR ${amount.toLocaleString()}`;
 
+/* Reports use persisted sales loaded from the API. */
+/*
 const demoInvoices = [
   {
     number: "840260",
@@ -134,6 +137,7 @@ const demoInvoices = [
     ],
   },
 ];
+*/
 
 function getTodayValue() {
   const today = new Date();
@@ -421,24 +425,56 @@ function downloadReport(report) {
 }
 
 function Reports({ invoices = [], onNotify }) {
-  const allInvoices = useMemo(() => [...invoices, ...demoInvoices], [invoices]);
+  const [storedInvoices, setStoredInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
 
+  useEffect(() => {
+    getSales()
+      .then(setStoredInvoices)
+      .catch((error) => {
+        onNotify?.(error.message, {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        });
+      })
+      .finally(() => setIsLoading(false));
+  }, [onNotify]);
+
+  const allInvoices = useMemo(
+    () =>
+      [...storedInvoices, ...invoices]
+        .filter(
+          (invoice, index, all) =>
+            all.findIndex((item) => item.number === invoice.number) === index,
+        )
+        .map((invoice) => ({
+          ...invoice,
+          total: invoice.netTotal ?? invoice.total,
+          items: invoice.items
+            .map((item) => ({
+              ...item,
+              quantity:
+                item.remainingQuantity ??
+                Math.max(0, item.quantity - (item.refundedQuantity ?? 0)),
+            }))
+            .filter((item) => item.quantity > 0),
+        })),
+    [invoices, storedInvoices],
+  );
+
   const filteredInvoices = useMemo(() => {
     const normalizedStart = startDate || "2000-01-01";
     const normalizedEnd = endDate || "2100-12-31";
 
     return allInvoices.filter((invoice) => {
-      const invoiceDate = getDateKey(invoice.date);
-      return (
-        invoiceDate >= normalizedStart &&
-        invoiceDate <= normalizedEnd &&
-        !invoice.refunded
-      );
+      const invoiceDate = getDateKey(invoice.createdAt);
+      return invoiceDate >= normalizedStart && invoiceDate <= normalizedEnd;
     });
   }, [allInvoices, endDate, startDate]);
 
@@ -476,7 +512,7 @@ function Reports({ invoices = [], onNotify }) {
     }
 
     setIsGenerating(true);
-    setTimeout(() => {
+    window.setTimeout(() => {
       if (filteredInvoices.length === 0) {
         onNotify?.("No invoices match the selected filters.", {
           textColor: "#64748b",
@@ -498,7 +534,7 @@ function Reports({ invoices = [], onNotify }) {
       const nextReport = {
         startDate,
         endDate,
-        includeRefunded: false,
+        includeRefunded: true,
         invoices: filteredInvoices,
         items: mergeInvoiceItems(filteredInvoices),
         total: filteredInvoices.reduce(
@@ -508,7 +544,7 @@ function Reports({ invoices = [], onNotify }) {
       };
       setReport(nextReport);
       setIsGenerating(false);
-    }, 700);
+    }, 300);
   };
 
   return (
@@ -551,7 +587,7 @@ function Reports({ invoices = [], onNotify }) {
 
       <div className="reports-panel reports-panel--compact">
         <AnimatePresence mode="wait">
-          {isGenerating ? (
+          {isLoading || isGenerating ? (
             <motion.div
               key="loading"
               className="reports-empty"
@@ -560,8 +596,14 @@ function Reports({ invoices = [], onNotify }) {
               exit={{ opacity: 0, y: -10 }}
             >
               <LuReceiptText aria-hidden="true" />
-              <strong>Generating report</strong>
-              <span>Compiling the filtered invoice data.</span>
+              <strong>
+                {isLoading ? "Loading sales" : "Generating report"}
+              </strong>
+              <span>
+                {isLoading
+                  ? "Loading persisted sales data."
+                  : "Compiling the selected date range."}
+              </span>
             </motion.div>
           ) : report ? (
             <motion.div
