@@ -533,6 +533,14 @@
   color: var(--color-text-muted);
   font-size: 0.7rem;
 }
+.pos-cart__variant {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .pos-cart__price-input {
   display: inline-flex;
   align-items: center;

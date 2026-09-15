@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { createSale } from "../../services/sales";
+import { getInventoryItems } from "../../services/inventory";
 import {
   LuCheck,
   LuChevronDown,
@@ -14,6 +16,8 @@ import {
 } from "react-icons/lu";
 import "./POS.scss";
 
+/* Removed hardcoded POS products. Inventory is loaded from the database. */
+/*
 const products = [
   { id: 1, name: "USB Barcode Scanner", category: "Hardware", price: 4500 },
   { id: 2, name: "Thermal Paper Roll", category: "Supplies", price: 350 },
@@ -144,6 +148,7 @@ const products = [
         : "TechCore",
   stock: product.id % 9 === 0 ? 0 : 4 + ((product.id * 7) % 18),
 }));
+*/
 
 export function FilterDropdown({ label, value, options, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -206,6 +211,8 @@ export function FilterDropdown({ label, value, options, onChange }) {
 }
 
 function POS({ onNotify, onInvoiceCreated }) {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [cartItems, setCartItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -213,6 +220,19 @@ function POS({ onNotify, onInvoiceCreated }) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [transactionNumber, setTransactionNumber] = useState("");
   const [invoice, setInvoice] = useState(null);
+
+  useEffect(() => {
+    getInventoryItems()
+      .then(setProducts)
+      .catch((error) => {
+        onNotify?.(error.message, {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        });
+      })
+      .finally(() => setIsLoading(false));
+  }, [onNotify]);
 
   const brands = [...new Set(products.map((product) => product.brand))];
   const categories = [...new Set(products.map((product) => product.category))];
@@ -284,51 +304,46 @@ function POS({ onNotify, onInvoiceCreated }) {
   const clearCart = () => {
     setCartItems([]);
   };
-  const handleCheckout = () => {
-    const generatedAt = new Date();
-    const invoiceNumber = String(generatedAt.getTime()).slice(-6);
-    const invoiceItems = cartItems.map((item) => ({
-      id: item.id,
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice ?? item.price,
-    }));
-    const invoiceTotal = invoiceItems.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0,
-    );
+  const handleCheckout = async () => {
+    try {
+      const completedInvoice = await createSale({
+        items: cartItems.map((item) => ({
+          inventoryItem: item.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice ?? item.price,
+        })),
+        paymentMethod,
+        transactionNumber,
+      });
 
-    const completedInvoice = {
-      number: invoiceNumber,
-      createdAt: generatedAt.toISOString(),
-      date: generatedAt.toLocaleDateString(),
-      time: generatedAt.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      items: invoiceItems,
-      total: invoiceTotal,
-      paymentMethod,
-      transactionNumber,
-    };
-
-    setInvoice(completedInvoice);
-    onInvoiceCreated?.(completedInvoice);
-
-    setCartItems([]);
-    setPaymentMethod("cash");
-    setTransactionNumber("");
-    onNotify?.(
-      `Checkout Successful! Invoice # INV-${invoiceNumber} generated.`,
-      {
-        icon: (
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        ),
-      },
-    );
+      setInvoice(completedInvoice);
+      onInvoiceCreated?.(completedInvoice);
+      try {
+        setProducts(await getInventoryItems());
+      } catch (inventoryError) {
+        onNotify?.(
+          `Checkout completed, but inventory could not refresh: ${inventoryError.message}`,
+          {
+            textColor: "#64748b",
+            iconColor: "#d97706",
+            progressColor: "#f59e0b",
+          },
+        );
+      }
+      setCartItems([]);
+      setPaymentMethod("cash");
+      setTransactionNumber("");
+      onNotify?.(
+        `Checkout successful. Invoice # INV-${completedInvoice.number} generated.`,
+        { icon: <LuCheck aria-hidden="true" /> },
+      );
+    } catch (error) {
+      onNotify?.(error.message, {
+        textColor: "#64748b",
+        iconColor: "#dc2626",
+        progressColor: "#dc2626",
+      });
+    }
   };
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -337,6 +352,15 @@ function POS({ onNotify, onInvoiceCreated }) {
     0,
   );
   const updateUnitPrice = (productId, value) => {
+    if (value === "") {
+      setCartItems((items) =>
+        items.map((item) =>
+          item.id === productId ? { ...item, unitPrice: "" } : item,
+        ),
+      );
+      return;
+    }
+
     const unitPrice = Number(value);
     setCartItems((items) =>
       items.map((item) =>
@@ -397,7 +421,11 @@ function POS({ onNotify, onInvoiceCreated }) {
         <div
           className={`pos-product-grid ${filteredProducts.length >= 3 ? "pos-product-grid--fluid" : ""}`}
         >
-          {filteredProducts.length === 0 ? (
+          {isLoading ? (
+            <div className="pos-product-grid__empty">
+              <strong>Loading inventory</strong>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="pos-product-grid__empty">
               <LuSearch aria-hidden="true" />
               <strong>No items found</strong>
@@ -432,9 +460,7 @@ function POS({ onNotify, onInvoiceCreated }) {
                       Variant
                     </span>
                     <span className="pos-product__variants">
-                      {product.variants
-                        .map((variant) => variant.value)
-                        .join(" / ")}
+                      {product.variants.join(" / ")}
                     </span>
                   </span>
                 )}
@@ -519,6 +545,11 @@ function POS({ onNotify, onInvoiceCreated }) {
                       </button>
                     </div>
                   </div>
+                  {item.variants?.length > 0 && (
+                    <span className="pos-cart__variant">
+                      Variant: {item.variants.join(" / ")}
+                    </span>
+                  )}
                   <label className="pos-cart__unit-price">
                     <span className="pos-cart__price-input">
                       <span>PKR</span>
@@ -644,6 +675,9 @@ function POS({ onNotify, onInvoiceCreated }) {
                 <div className="invoice-paper__item" key={item.id}>
                   <div>
                     <strong>{item.name}</strong>
+                    {item.variants?.length > 0 && (
+                      <span>{item.variants.join(" / ")}</span>
+                    )}
                     <span>PKR {item.unitPrice.toLocaleString()}</span>
                   </div>
                   <strong>{item.quantity}</strong>

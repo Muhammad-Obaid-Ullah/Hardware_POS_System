@@ -31,6 +31,7 @@ function ScreenPanel({
     screenContent = (
       <Sales
         invoices={invoices}
+        onNotify={onNotify}
         onInvoiceDeleted={onInvoiceDeleted}
         onInvoiceRestored={onInvoiceRestored}
         onInvoiceRefunded={onInvoiceRefunded}

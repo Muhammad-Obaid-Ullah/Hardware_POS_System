@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
+import { getSales } from "../../services/sales";
 import { AnimatePresence, motion } from "motion/react";
 import {
   LuCalendarDays,
@@ -26,7 +27,7 @@ function getInvoiceMarkup(invoice) {
   const items = invoice.items
     .map(
       (item) =>
-        `<tr><td><strong>${item.name}</strong><small>${formatMoney(item.unitPrice)}</small></td><td>${item.quantity}</td></tr>`,
+        `<tr><td><strong>${item.name}</strong>${item.variants?.length ? `<small>${item.variants.join(" / ")}</small>` : ""}<small>${formatMoney(item.unitPrice)}</small></td><td>${item.quantity}</td></tr>`,
     )
     .join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>INV-${invoice.number}</title><style>body{font-family:Arial,sans-serif;color:#374151;max-width:430px;margin:32px auto;padding:24px}h1{text-align:center}header{text-align:center;border-bottom:1px dashed #d1d5db;padding-bottom:16px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{text-align:left;padding:9px 0;border-bottom:1px solid #e5e7eb}th:last-child,td:last-child{text-align:right}small{display:block;color:#6b7280;margin-top:4px}.total{display:flex;justify-content:space-between;font-size:18px;font-weight:bold;border-top:1px solid #d1d5db;padding-top:16px}</style></head><body><header><h1>Invoice</h1><div>INV-${invoice.number}</div><div>${invoice.date} at ${invoice.time}</div></header><table><thead><tr><th>Items</th><th>Qty</th></tr></thead><tbody>${items}</tbody></table><div class="total"><span>Total price</span><span>${formatMoney(invoice.total)}</span></div><p>Payment method: <strong>${invoice.paymentMethod === "online" ? "Online" : "Cash"}</strong></p>${invoice.transactionNumber ? `<p>Transaction #${invoice.transactionNumber}</p>` : ""}</body></html>`;
@@ -67,6 +68,13 @@ function downloadInvoice(invoice) {
     pdf.text(itemLines, margin, y);
     pdf.text(String(item.quantity), pageWidth - margin, y, { align: "right" });
     y += itemLines.length * 4;
+    if (item.variants?.length) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(107, 114, 128);
+      const variantLines = pdf.splitTextToSize(item.variants.join(" / "), 48);
+      pdf.text(variantLines, margin, y);
+      y += variantLines.length * 3;
+    }
     pdf.setFontSize(8);
     pdf.setTextColor(107, 114, 128);
     pdf.text(formatMoney(item.unitPrice), margin, y);
@@ -291,6 +299,8 @@ function DatePicker({ label, value, min, max, onChange }) {
   );
 }
 
+/* Removed hardcoded invoices. Sales are loaded from the database. */
+/*
 function makeDummyInvoice(
   number,
   daysAgo,
@@ -354,6 +364,7 @@ const dummyInvoices = [
     "TRX-20260820-04",
   ),
 ];
+*/
 
 function getDateKey(dateValue) {
   const date = new Date(dateValue);
@@ -517,6 +528,9 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
               >
                 <div>
                   <strong>{item.name}</strong>
+                  {item.variants?.length > 0 && (
+                    <span>{item.variants.join(" / ")}</span>
+                  )}
                   <span>{formatMoney(item.unitPrice)}</span>
                 </div>
                 {isEditing ? (
@@ -585,31 +599,52 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
 
 function Sales({
   invoices = [],
+  onNotify,
   onInvoiceRefunded,
   onInvoicePartiallyRefunded,
 }) {
+  const [storedInvoices, setStoredInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [refundedInvoiceNumbers, setRefundedInvoiceNumbers] = useState([]);
   const [partialRefunds, setPartialRefunds] = useState({});
+
+  useEffect(() => {
+    getSales()
+      .then(setStoredInvoices)
+      .catch((error) => {
+        onNotify?.(error.message, {
+          textColor: "#64748b",
+          iconColor: "#dc2626",
+          progressColor: "#dc2626",
+        });
+      });
+  }, [onNotify]);
+
   const allInvoices = useMemo(
     () =>
-      [...invoices, ...dummyInvoices].map((invoice) => ({
-        ...invoice,
-        ...(partialRefunds[invoice.number] ?? {}),
-        refunded:
-          invoice.refunded || refundedInvoiceNumbers.includes(invoice.number),
-        partiallyRefunded:
-          !(
-            invoice.refunded || refundedInvoiceNumbers.includes(invoice.number)
-          ) &&
-          (partialRefunds[invoice.number]?.partiallyRefunded ??
-            invoice.partiallyRefunded ??
-            false),
-      })),
-    [invoices, partialRefunds, refundedInvoiceNumbers],
+      [...storedInvoices, ...invoices]
+        .filter(
+          (invoice, index, all) =>
+            all.findIndex((item) => item.number === invoice.number) === index,
+        )
+        .map((invoice) => ({
+          ...invoice,
+          ...(partialRefunds[invoice.number] ?? {}),
+          refunded:
+            invoice.refunded || refundedInvoiceNumbers.includes(invoice.number),
+          partiallyRefunded:
+            !(
+              invoice.refunded ||
+              refundedInvoiceNumbers.includes(invoice.number)
+            ) &&
+            (partialRefunds[invoice.number]?.partiallyRefunded ??
+              invoice.partiallyRefunded ??
+              false),
+        })),
+    [invoices, partialRefunds, refundedInvoiceNumbers, storedInvoices],
   );
   const refundInvoice = (invoiceNumber) => {
     setRefundedInvoiceNumbers((numbers) =>
