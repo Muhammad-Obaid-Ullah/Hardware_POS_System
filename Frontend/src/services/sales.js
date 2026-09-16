@@ -44,8 +44,12 @@ async function request(path, options = {}) {
   return data;
 }
 
-export async function getSales() {
-  const data = await request("");
+export async function getSales(fromDate, toDate) {
+  const params = new URLSearchParams();
+  if (fromDate) params.set("fromDate", fromDate);
+  if (toDate) params.set("toDate", toDate);
+  const query = params.toString();
+  const data = await request(query ? `?${query}` : "");
   return data.data.map(normalizeSale);
 }
 

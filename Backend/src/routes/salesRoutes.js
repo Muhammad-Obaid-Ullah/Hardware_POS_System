@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { body } from "express-validator";
+import { body, query } from "express-validator";
 import {
   createSale,
   listSales,
@@ -12,7 +12,21 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const router = Router();
 router.use(requireAuth);
 
-router.get("/", asyncHandler(listSales));
+router.get(
+  "/",
+  [
+    query("fromDate")
+      .optional()
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage("fromDate must use YYYY-MM-DD format"),
+    query("toDate")
+      .optional()
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage("toDate must use YYYY-MM-DD format"),
+  ],
+  validateRequest,
+  asyncHandler(listSales),
+);
 router.patch(
   "/:number/refund",
   body("items")

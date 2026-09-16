@@ -3,8 +3,47 @@ import Sale from "../models/Sale.js";
 import mongoose from "mongoose";
 
 export async function listSales(request, response) {
-  const sales = await Sale.find().sort({ createdAt: -1 });
+  const { fromDate, toDate } = request.query;
+  const createdAt = {};
+
+  if (fromDate) {
+    createdAt.$gte = parseDateBoundary(fromDate, false);
+  }
+
+  if (toDate) {
+    createdAt.$lt = parseDateBoundary(toDate, true);
+  }
+
+  if (createdAt.$gte && createdAt.$lt && createdAt.$gte >= createdAt.$lt) {
+    return response.status(400).json({
+      success: false,
+      message: "fromDate cannot be later than toDate",
+    });
+  }
+
+  const sales = await Sale.find(
+    Object.keys(createdAt).length ? { createdAt } : {},
+  ).sort({ createdAt: -1 });
   response.json({ success: true, data: sales });
+}
+
+function parseDateBoundary(value, isEnd) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const error = new Error("Dates must use YYYY-MM-DD format");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const suffix = isEnd ? "T00:00:00.000Z" : "T00:00:00.000Z";
+  const date = new Date(`${value}${suffix}`);
+  if (Number.isNaN(date.getTime())) {
+    const error = new Error("Invalid date");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (isEnd) date.setUTCDate(date.getUTCDate() + 1);
+  return date;
 }
 
 export async function createSale(request, response) {

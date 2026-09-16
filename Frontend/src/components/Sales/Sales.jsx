@@ -377,14 +377,6 @@ const dummyInvoices = [
 ];
 */
 
-function getDateKey(dateValue) {
-  const date = new Date(dateValue);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
   const [isEditing, setIsEditing] = useState(false);
   const [invoiceView, setInvoiceView] = useState(
@@ -659,21 +651,17 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
   );
 }
 
-function Sales({
-  invoices = [],
-  onNotify,
-  onInvoiceRefunded,
-  onInvoicePartiallyRefunded,
-}) {
+function Sales({ onNotify, onInvoiceRefunded, onInvoicePartiallyRefunded }) {
   const [storedInvoices, setStoredInvoices] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadedRange, setLoadedRange] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(getTodayValue);
+  const [toDate, setToDate] = useState(getTodayValue);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   useEffect(() => {
-    getSales()
+    const rangeKey = `${fromDate}|${toDate}`;
+    getSales(fromDate, toDate)
       .then(setStoredInvoices)
       .catch((error) => {
         onNotify?.(error.message, {
@@ -682,22 +670,19 @@ function Sales({
           progressColor: "#dc2626",
         });
       })
-      .finally(() => setIsLoading(false));
-  }, [onNotify]);
+      .finally(() => setLoadedRange(rangeKey));
+  }, [fromDate, onNotify, toDate]);
+
+  const isLoading = loadedRange !== `${fromDate}|${toDate}`;
 
   const allInvoices = useMemo(
     () =>
-      [...storedInvoices, ...invoices]
-        .filter(
-          (invoice, index, all) =>
-            all.findIndex((item) => item.number === invoice.number) === index,
-        )
-        .map((invoice) => ({
-          ...invoice,
-          refunded: invoice.refunded ?? false,
-          partiallyRefunded: invoice.partiallyRefunded ?? false,
-        })),
-    [invoices, storedInvoices],
+      storedInvoices.map((invoice) => ({
+        ...invoice,
+        refunded: invoice.refunded ?? false,
+        partiallyRefunded: invoice.partiallyRefunded ?? false,
+      })),
+    [storedInvoices],
   );
   const applyUpdatedSale = (updatedSale) => {
     setStoredInvoices((current) =>
@@ -762,12 +747,9 @@ function Sales({
     const query = searchTerm.trim().toLowerCase();
     return allInvoices.filter((invoice) => {
       const matchesNumber = `inv-${invoice.number}`.includes(query);
-      const invoiceDate = getDateKey(invoice.createdAt);
-      const matchesFromDate = !fromDate || invoiceDate >= fromDate;
-      const matchesToDate = !toDate || invoiceDate <= toDate;
-      return matchesNumber && matchesFromDate && matchesToDate;
+      return matchesNumber;
     });
-  }, [allInvoices, fromDate, searchTerm, toDate]);
+  }, [allInvoices, searchTerm]);
 
   return (
     <div className="sales-screen">
