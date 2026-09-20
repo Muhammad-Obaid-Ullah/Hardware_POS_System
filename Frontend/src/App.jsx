@@ -19,10 +19,7 @@ function getTodayValue() {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
-  const defaultCredentials = useMemo(
-    () => ({ email: "admin@pos.com", password: "admin@1234" }),
-    [],
-  );
+  const defaultCredentials = useMemo(() => ({ email: "", password: "" }), []);
   const [formValues, setFormValues] = useState(defaultCredentials);
   const [loading, setLoading] = useState(false);
   const [activeScreen, setActiveScreen] = useState("Dashboard");
