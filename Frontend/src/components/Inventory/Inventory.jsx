@@ -488,7 +488,7 @@ function getInventoryStatus(stock, threshold) {
     };
   }
 
-  if (stock <= threshold) {
+  if (stock < threshold) {
     return {
       label: "Critical",
       className: "critical",
@@ -496,7 +496,7 @@ function getInventoryStatus(stock, threshold) {
     };
   }
 
-  if (stock <= threshold * 2) {
+  if (stock <= threshold + 5) {
     return {
       label: "Low Stock",
       className: "low-stock",

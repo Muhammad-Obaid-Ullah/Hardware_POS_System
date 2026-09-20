@@ -4,6 +4,7 @@ import { IoTrendingUp } from "react-icons/io5";
 import {
   LuTags,
   LuLayoutList,
+  LuCircleCheck,
   LuTriangleAlert,
   LuPackageMinus,
   LuPackageX,
@@ -362,16 +363,22 @@ function Dashboard({
         className: "out-of-stock",
         icon: <LuPackageX aria-hidden="true" />,
       };
-    if (stock <= threshold)
+    if (stock < threshold)
       return {
         label: "Critical",
         className: "critical",
         icon: <LuPackageMinus aria-hidden="true" />,
       };
+    if (stock <= threshold + 5)
+      return {
+        label: "Low Stock",
+        className: "low-stock",
+        icon: <LuTriangleAlert aria-hidden="true" />,
+      };
     return {
-      label: "Low Stock",
-      className: "low-stock",
-      icon: <LuTriangleAlert aria-hidden="true" />,
+      label: "Healthy Stock",
+      className: "good",
+      icon: <LuCircleCheck aria-hidden="true" />,
     };
   };
 
@@ -525,7 +532,9 @@ function Dashboard({
   }, [fromDate, toDate, summary]);
 
   const pageSize = 5;
-  const stockInfoRows = summary?.inventory || [];
+  const stockInfoRows = (summary?.inventory || []).filter(
+    (row) => getStockStatus(row.stock, row.threshold).label !== "Healthy Stock",
+  );
   const pageCount = Math.ceil(stockInfoRows.length / pageSize);
   const rows = stockInfoRows.slice(
     stockPage * pageSize,
