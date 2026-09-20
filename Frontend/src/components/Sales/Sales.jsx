@@ -651,12 +651,18 @@ function InvoiceReceipt({ invoice, onClose, onRefund, onPartiallyRefund }) {
   );
 }
 
-function Sales({ onNotify, onInvoiceRefunded, onInvoicePartiallyRefunded }) {
+function Sales({
+  onNotify,
+  onInvoiceRefunded,
+  onInvoicePartiallyRefunded,
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+}) {
   const [storedInvoices, setStoredInvoices] = useState([]);
   const [loadedRange, setLoadedRange] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState(getTodayValue);
-  const [toDate, setToDate] = useState(getTodayValue);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   useEffect(() => {
@@ -768,13 +774,13 @@ function Sales({ onNotify, onInvoiceRefunded, onInvoicePartiallyRefunded }) {
           label="From"
           value={fromDate}
           max={toDate}
-          onChange={setFromDate}
+          onChange={onFromDateChange}
         />
         <DatePicker
           label="To"
           value={toDate}
           min={fromDate}
-          onChange={setToDate}
+          onChange={onToDateChange}
         />
       </div>
       <div className="sales-results-header">
@@ -898,7 +904,11 @@ function Sales({ onNotify, onInvoiceRefunded, onInvoicePartiallyRefunded }) {
               </div>
               <div className="sales-invoice-row__footer">
                 <span className="sales-invoice-row__total">
-                  {formatMoney(invoice.total)}
+                  {formatMoney(
+                    invoice.refunded || invoice.partiallyRefunded
+                      ? invoice.netTotal
+                      : invoice.total,
+                  )}
                 </span>
                 <LuChevronRight
                   className="sales-invoice-row__arrow"

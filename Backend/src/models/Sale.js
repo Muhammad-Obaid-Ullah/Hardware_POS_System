@@ -8,6 +8,8 @@ const saleItemSchema = new mongoose.Schema(
       required: true,
     },
     name: { type: String, required: true, trim: true },
+    brand: { type: String, default: null, trim: true },
+    category: { type: String, default: "Other", trim: true },
     variants: { type: [String], default: [] },
     quantity: { type: Number, required: true, min: 1 },
     refundedQuantity: { type: Number, default: 0, min: 0 },

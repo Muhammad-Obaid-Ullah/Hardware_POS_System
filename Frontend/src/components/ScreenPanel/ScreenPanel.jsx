@@ -16,11 +16,27 @@ function ScreenPanel({
   onInvoiceRestored,
   onInvoiceRefunded,
   onInvoicePartiallyRefunded,
+  dashboardFromDate,
+  dashboardToDate,
+  onDashboardFromDateChange,
+  onDashboardToDateChange,
+  salesFromDate,
+  salesToDate,
+  onSalesFromDateChange,
+  onSalesToDateChange,
 }) {
   let screenContent;
 
   if (title === "Dashboard") {
-    screenContent = <Dashboard onNavigate={onNavigate} />;
+    screenContent = (
+      <Dashboard
+        onNavigate={onNavigate}
+        fromDate={dashboardFromDate}
+        toDate={dashboardToDate}
+        onFromDateChange={onDashboardFromDateChange}
+        onToDateChange={onDashboardToDateChange}
+      />
+    );
   } else if (title === "POS") {
     screenContent = (
       <POS onNotify={onNotify} onInvoiceCreated={onInvoiceCreated} />
@@ -36,6 +52,10 @@ function ScreenPanel({
         onInvoiceRestored={onInvoiceRestored}
         onInvoiceRefunded={onInvoiceRefunded}
         onInvoicePartiallyRefunded={onInvoicePartiallyRefunded}
+        fromDate={salesFromDate}
+        toDate={salesToDate}
+        onFromDateChange={onSalesFromDateChange}
+        onToDateChange={onSalesToDateChange}
       />
     );
   } else if (title === "Reports") {

@@ -1,17 +1,18 @@
 import InventoryItem from "../models/InventoryItem.js";
 import Sale from "../models/Sale.js";
 import mongoose from "mongoose";
+import { parseDateBoundary } from "../utils/dateRange.js";
 
 export async function listSales(request, response) {
-  const { fromDate, toDate } = request.query;
+  const { fromDate, toDate, timeZone = "UTC" } = request.query;
   const createdAt = {};
 
   if (fromDate) {
-    createdAt.$gte = parseDateBoundary(fromDate, false);
+    createdAt.$gte = parseDateBoundary(fromDate, false, timeZone);
   }
 
   if (toDate) {
-    createdAt.$lt = parseDateBoundary(toDate, true);
+    createdAt.$lt = parseDateBoundary(toDate, true, timeZone);
   }
 
   if (createdAt.$gte && createdAt.$lt && createdAt.$gte >= createdAt.$lt) {
@@ -25,25 +26,6 @@ export async function listSales(request, response) {
     Object.keys(createdAt).length ? { createdAt } : {},
   ).sort({ createdAt: -1 });
   response.json({ success: true, data: sales });
-}
-
-function parseDateBoundary(value, isEnd) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const error = new Error("Dates must use YYYY-MM-DD format");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const suffix = isEnd ? "T00:00:00.000Z" : "T00:00:00.000Z";
-  const date = new Date(`${value}${suffix}`);
-  if (Number.isNaN(date.getTime())) {
-    const error = new Error("Invalid date");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (isEnd) date.setUTCDate(date.getUTCDate() + 1);
-  return date;
 }
 
 export async function createSale(request, response) {
@@ -105,6 +87,8 @@ export async function createSale(request, response) {
     const saleItems = updatedItems.map(({ item, quantity, unitPrice }) => ({
       inventoryItem: item._id,
       name: item.name,
+      brand: item.brand,
+      category: item.category,
       variants: item.variants,
       quantity,
       unitPrice,

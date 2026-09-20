@@ -12,6 +12,7 @@ import healthRoutes from "./routes/healthRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import salesRoutes from "./routes/salesRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sales", salesRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

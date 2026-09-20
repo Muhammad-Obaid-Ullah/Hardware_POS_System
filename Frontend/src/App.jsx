@@ -7,6 +7,15 @@ import ScreenPanel from "./components/ScreenPanel/ScreenPanel";
 import { getCurrentUser, loginUser, logoutUser } from "./services/auth";
 import "./App.scss";
 
+function getTodayValue() {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
@@ -17,6 +26,10 @@ function App() {
   const [formValues, setFormValues] = useState(defaultCredentials);
   const [loading, setLoading] = useState(false);
   const [activeScreen, setActiveScreen] = useState("Dashboard");
+  const [dashboardFromDate, setDashboardFromDate] = useState(getTodayValue);
+  const [dashboardToDate, setDashboardToDate] = useState(getTodayValue);
+  const [salesFromDate, setSalesFromDate] = useState(getTodayValue);
+  const [salesToDate, setSalesToDate] = useState(getTodayValue);
   const [notifications, setNotifications] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
@@ -76,6 +89,11 @@ function App() {
       setActiveScreen("Dashboard");
       setIsAuthenticated(true);
       setSessionExpiresAt(session.expiresAt);
+      const today = getTodayValue();
+      setDashboardFromDate(today);
+      setDashboardToDate(today);
+      setSalesFromDate(today);
+      setSalesToDate(today);
       pushNotification("Signed in successfully", {
         icon: (
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -135,6 +153,11 @@ function App() {
       () => {
         void logoutUser();
         setIsAuthenticated(false);
+        const today = getTodayValue();
+        setDashboardFromDate(today);
+        setDashboardToDate(today);
+        setSalesFromDate(today);
+        setSalesToDate(today);
       },
       Math.max(0, sessionExpiresAt - Date.now()),
     );
@@ -182,6 +205,11 @@ function App() {
                 void logoutUser();
                 setSessionExpiresAt(null);
                 setIsAuthenticated(false);
+                const today = getTodayValue();
+                setDashboardFromDate(today);
+                setDashboardToDate(today);
+                setSalesFromDate(today);
+                setSalesToDate(today);
                 pushNotification("Signed out successfully", {
                   icon: (
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -200,6 +228,14 @@ function App() {
                 title={activeScreen}
                 onNavigate={setScreen}
                 onNotify={pushNotification}
+                dashboardFromDate={dashboardFromDate}
+                dashboardToDate={dashboardToDate}
+                onDashboardFromDateChange={setDashboardFromDate}
+                onDashboardToDateChange={setDashboardToDate}
+                salesFromDate={salesFromDate}
+                salesToDate={salesToDate}
+                onSalesFromDateChange={setSalesFromDate}
+                onSalesToDateChange={setSalesToDate}
                 invoices={invoices}
                 onInvoiceCreated={(invoice) =>
                   setInvoices((current) => [invoice, ...current])

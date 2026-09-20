@@ -358,8 +358,13 @@
   margin-bottom: 12px;
 }
 
+.dashboard-card--chart {
+  min-height: 300px;
+}
+
 .dashboard-chart {
   width: 100%;
+  min-height: 240px;
   height: 240px;
 }
 

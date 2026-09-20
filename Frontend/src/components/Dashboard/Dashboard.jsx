@@ -15,6 +15,7 @@ import { FaRupeeSign } from "react-icons/fa6";
 import { TbSitemap } from "react-icons/tb";
 import { BsBoxes } from "react-icons/bs";
 import { BiCartAdd } from "react-icons/bi";
+import { getDashboardSummary } from "../../services/dashboard";
 import "./Dashboard.scss";
 
 const performanceCards = [
@@ -71,6 +72,8 @@ const storePerformanceCards = [
   },
 ];
 
+/* Stock rows are loaded from the dashboard summary endpoint. */
+/*
 const stockInfoRows = [
   ["Sensor Cables", 9, 20],
   ["Thermal Paper", 14, 9],
@@ -105,6 +108,7 @@ const stockInfoRows = [
   ["Shelf Label Holders", 0, 8],
   ["POS Software Licenses", 13, 10],
 ].map(([item, stock, threshold]) => ({ item, stock, threshold }));
+*/
 
 const dashboardWeekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -137,10 +141,13 @@ function getDashboardToday() {
   ].join("-");
 }
 
-function getDashboardRange(fromDate, toDate) {
-  const isToday =
-    fromDate === getDashboardToday() && (!toDate || toDate === fromDate);
-  if (isToday) {
+function getDashboardRange(fromDate, toDate, summary) {
+  const effectiveStart = fromDate || summary?.rangeStart;
+  const effectiveEnd = toDate || summary?.rangeEnd || getDashboardToday();
+  const isHourly = Boolean(
+    effectiveStart && effectiveEnd && effectiveStart === effectiveEnd,
+  );
+  if (isHourly) {
     return {
       isHourly: true,
       labels: Array.from({ length: 24 }, (_, hour) => {
@@ -152,11 +159,12 @@ function getDashboardRange(fromDate, toDate) {
     };
   }
 
-  const today = new Date(`${getDashboardToday()}T00:00:00`);
-  const end = toDate ? new Date(`${toDate}T00:00:00`) : today;
+  const end = new Date(`${effectiveEnd}T00:00:00`);
   const start = fromDate
     ? new Date(`${fromDate}T00:00:00`)
-    : new Date(end.getTime() - 89 * 24 * 60 * 60 * 1000);
+    : effectiveStart
+      ? new Date(`${effectiveStart}T00:00:00`)
+      : new Date(end.getTime() - 89 * 24 * 60 * 60 * 1000);
   const rangeDays = Math.max(
     1,
     Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
@@ -326,15 +334,26 @@ function DashboardDatePicker({ label, value, min, max, onChange }) {
   );
 }
 
-function Dashboard({ onNavigate }) {
+function Dashboard({
+  onNavigate,
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+}) {
   const [stockPage, setStockPage] = useState(0);
-  const [salesFromDate, setSalesFromDate] = useState("");
-  const [salesToDate, setSalesToDate] = useState("");
+  const [summary, setSummary] = useState(null);
   const salesChartRef = useRef(null);
   const profitChartRef = useRef(null);
   const topCategoriesRef = useRef(null);
   const paymentMethodsRef = useRef(null);
   const topCompaniesRef = useRef(null);
+
+  useEffect(() => {
+    getDashboardSummary(fromDate, toDate)
+      .then(setSummary)
+      .catch(() => setSummary(null));
+  }, [fromDate, toDate]);
 
   const getStockStatus = (stock, threshold) => {
     if (stock === 0)
@@ -369,26 +388,21 @@ function Dashboard({ onNavigate }) {
     (async () => {
       const Apex = (await import("apexcharts")).default;
       if (cancelled) return;
-      const { isHourly, labels, rangeDays } = getDashboardRange(
-        salesFromDate,
-        salesToDate,
+      const {
+        isHourly,
+        labels: rangeLabels,
+        rangeDays,
+      } = getDashboardRange(fromDate, toDate, summary);
+      const labels = rangeLabels;
+      const trendMap = new Map(
+        (summary?.trends || []).map((trend) => [trend.label, trend]),
       );
-      const rangeScale = isHourly
-        ? 1
-        : Math.max(0.55, Math.min(1.65, rangeDays / 30));
-      const series = (start, phase = 0) =>
-        labels.map((_, index) =>
-          Math.max(
-            0,
-            Math.round(
-              start *
-                rangeScale *
-                (1 +
-                  Math.sin((index + phase) / 5) * 0.18 +
-                  Math.cos((index + phase) / 9) * 0.08),
-            ),
-          ),
-        );
+      const salesSeries = labels.map(
+        (label) => trendMap.get(label)?.sales || 0,
+      );
+      const profitSeries = labels.map(
+        (label) => trendMap.get(label)?.profit || 0,
+      );
       const area = (name, data, color) => ({
         series: [{ name, data }],
         chart: {
@@ -412,14 +426,12 @@ function Dashboard({ onNavigate }) {
         yaxis: { tickAmount: 4 },
       });
       const options = [
-        area("Sales", series(12000, 0), "var(--color-primary)"),
-        area("Profit", series(3000, 2), "var(--color-primary-dark)"),
+        area("Sales", salesSeries, "var(--color-primary)"),
+        area("Profit", profitSeries, "var(--color-primary-dark)"),
         {
           series: [
             {
-              data: [1720, 1480, 1320, 1120, 980].map((value, index) =>
-                Math.round(value * rangeScale * (1 + index * 0.04)),
-              ),
+              data: (summary?.categories || []).map((entry) => entry.value),
             },
           ],
           chart: {
@@ -432,7 +444,7 @@ function Dashboard({ onNavigate }) {
           plotOptions: {
             bar: {
               horizontal: true,
-              barHeight: "75%",
+              barHeight: "85%",
               borderRadius: 6,
               dataLabels: { position: "center" },
             },
@@ -449,18 +461,16 @@ function Dashboard({ onNavigate }) {
           },
           xaxis: {
             categories: [
-              "Beverages",
-              "Snacks",
-              "Electronics",
-              "Clothing",
-              "Home",
+              ...(summary?.categories || []).map((entry) => entry.label),
             ],
           },
         },
         {
           series: [
-            Math.round(58 + Math.sin(rangeDays / 11) * 8),
-            Math.round(42 - Math.sin(rangeDays / 11) * 8),
+            summary?.payments?.find((entry) => entry.label === "cash")?.value ||
+              0,
+            summary?.payments?.find((entry) => entry.label === "online")
+              ?.value || 0,
           ],
           chart: { type: "donut", height: 240, toolbar: { show: false } },
           labels: ["Cash", "Online"],
@@ -480,9 +490,7 @@ function Dashboard({ onNavigate }) {
           series: [
             {
               name: "Sales",
-              data: [2020, 1840, 1600, 1430, 1280].map((value, index) =>
-                Math.round(value * rangeScale * (1 - index * 0.03)),
-              ),
+              data: (summary?.brands || []).map((entry) => entry.value),
             },
           ],
           chart: { type: "bar", height: 240, toolbar: { show: false } },
@@ -494,7 +502,9 @@ function Dashboard({ onNavigate }) {
               `${Math.round((value / (opts.w.globals.seriesTotals[0] || 1)) * 100)}%`,
             style: { colors: ["#fff"], fontSize: "0.65rem" },
           },
-          xaxis: { categories: ["Acme", "Nova", "Zenith", "Orion", "Apex"] },
+          xaxis: {
+            categories: (summary?.brands || []).map((entry) => entry.label),
+          },
         },
       ];
       elements.forEach((element, index) => {
@@ -512,9 +522,10 @@ function Dashboard({ onNavigate }) {
         if (element) element.innerHTML = "";
       });
     };
-  }, [salesFromDate, salesToDate]);
+  }, [fromDate, toDate, summary]);
 
   const pageSize = 5;
+  const stockInfoRows = summary?.inventory || [];
   const pageCount = Math.ceil(stockInfoRows.length / pageSize);
   const rows = stockInfoRows.slice(
     stockPage * pageSize,
@@ -522,18 +533,15 @@ function Dashboard({ onNavigate }) {
   );
   const first = stockPage * pageSize + 1;
   const last = Math.min((stockPage + 1) * pageSize, stockInfoRows.length);
-  const salesRange = getDashboardRange(salesFromDate, salesToDate);
-  const metricScale = salesRange.rangeDays / 90;
-  const periodLabel =
-    salesFromDate || salesToDate ? "Selected date range" : "Last 90 days";
+  const periodLabel = "Selected date range";
   const filteredPerformanceCards = performanceCards.map((card) => {
-    const baseValues = {
-      "Total Orders": 1240,
-      "Total Sales": 38400,
-      "Net Profit": 9100,
-      "Items Sold": 562,
+    const values = {
+      "Total Orders": summary?.metrics.totalOrders || 0,
+      "Total Sales": summary?.metrics.totalSales || 0,
+      "Net Profit": summary?.metrics.netProfit || 0,
+      "Items Sold": summary?.metrics.itemsSold || 0,
     };
-    const value = Math.max(0, Math.round(baseValues[card.label] * metricScale));
+    const value = values[card.label];
     const formattedValue =
       card.label.includes("Sales") || card.label === "Net Profit"
         ? `PKR ${(value / 1000).toFixed(1)}K`
@@ -554,15 +562,15 @@ function Dashboard({ onNavigate }) {
           <div className="dashboard-section__date-filters">
             <DashboardDatePicker
               label="From"
-              value={salesFromDate}
-              max={salesToDate}
-              onChange={setSalesFromDate}
+              value={fromDate}
+              max={toDate}
+              onChange={onFromDateChange}
             />
             <DashboardDatePicker
               label="To"
-              value={salesToDate}
-              min={salesFromDate}
-              onChange={setSalesToDate}
+              value={toDate}
+              min={fromDate}
+              onChange={onToDateChange}
             />
           </div>
         </div>
@@ -611,19 +619,32 @@ function Dashboard({ onNavigate }) {
           <p className="dashboard-section__title">Store Overview</p>
         </div>
         <div className="dashboard-section__cards dashboard-section__cards--metrics">
-          {storePerformanceCards.map((card) => (
-            <div
-              key={card.label}
-              className="dashboard-card dashboard-card--metric"
-            >
-              <div className="dashboard-card__icon">{card.icon}</div>
-              <div>
-                <p className="dashboard-card__label">{card.label}</p>
-                <p className="dashboard-card__value">{card.value}</p>
-                <p className="dashboard-card__detail">{card.detail}</p>
+          {storePerformanceCards.map((card) => {
+            const values = {
+              "Inventory Value": summary?.store.inventoryValue || 0,
+              "Potential Sales": summary?.store.potentialSales || 0,
+              "Estimated Profit": summary?.store.estimatedProfit || 0,
+              "Total Categories": summary?.store.totalCategories || 0,
+            };
+            const value = values[card.label];
+            return (
+              <div
+                key={card.label}
+                className="dashboard-card dashboard-card--metric"
+              >
+                <div className="dashboard-card__icon">{card.icon}</div>
+                <div>
+                  <p className="dashboard-card__label">{card.label}</p>
+                  <p className="dashboard-card__value">
+                    {card.label === "Total Categories"
+                      ? value.toLocaleString()
+                      : `PKR ${(value / 1000).toFixed(1)}K`}
+                  </p>
+                  <p className="dashboard-card__detail">{card.detail}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="stock-info">
           <div className="stock-info__header">

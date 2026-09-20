@@ -46,6 +46,7 @@ async function request(path, options = {}) {
 
 export async function getSales(fromDate, toDate) {
   const params = new URLSearchParams();
+  params.set("timeZone", Intl.DateTimeFormat().resolvedOptions().timeZone);
   if (fromDate) params.set("fromDate", fromDate);
   if (toDate) params.set("toDate", toDate);
   const query = params.toString();
