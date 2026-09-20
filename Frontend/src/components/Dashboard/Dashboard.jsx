@@ -73,44 +73,6 @@ const storePerformanceCards = [
   },
 ];
 
-/* Stock rows are loaded from the dashboard summary endpoint. */
-/*
-const stockInfoRows = [
-  ["Sensor Cables", 9, 20],
-  ["Thermal Paper", 14, 9],
-  ["Coffee Beans", 0, 30],
-  ["USB Barcode Scanner", 6, 10],
-  ["Receipt Printer Rolls", 0, 12],
-  ["Wireless Keyboards", 18, 15],
-  ["Cash Drawer Trays", 4, 8],
-  ["Ethernet Cables", 13, 10],
-  ["Display Stands", 0, 6],
-  ["Label Printer Ink", 7, 7],
-  ["POS Terminal Stands", 12, 10],
-  ["HDMI Display Cables", 5, 8],
-  ["Keyboard Wrist Rests", 0, 5],
-  ["Cash Register Keys", 16, 12],
-  ["Receipt Printer Heads", 3, 6],
-  ["Barcode Labels", 23, 18],
-  ["Network Switches", 0, 4],
-  ["Power Adapters", 9, 9],
-  ["USB Extension Cables", 19, 14],
-  ["Customer Display Screens", 2, 5],
-  ["Receipt Paper Boxes", 28, 22],
-  ["Cashier Headsets", 0, 3],
-  ["Tablet Charging Docks", 11, 8],
-  ["Inventory Tags", 7, 10],
-  ["Security Cable Locks", 15, 10],
-  ["Handheld POS Scanners", 0, 6],
-  ["Monitor Mounts", 8, 8],
-  ["Power Strip Units", 17, 12],
-  ["Thermal Printer Covers", 4, 7],
-  ["Wireless Mouse Units", 20, 15],
-  ["Shelf Label Holders", 0, 8],
-  ["POS Software Licenses", 13, 10],
-].map(([item, stock, threshold]) => ({ item, stock, threshold }));
-*/
-
 const dashboardWeekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function formatDashboardDate(dateValue) {
