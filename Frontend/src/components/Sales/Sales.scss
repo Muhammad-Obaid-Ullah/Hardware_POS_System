@@ -2,6 +2,7 @@
   display: flex;
   min-height: 0;
   height: 100%;
+  min-width: 0;
   flex-direction: column;
   gap: 20px;
 }
@@ -228,6 +229,7 @@
 .sales-invoice-list {
   display: grid;
   min-height: 0;
+  min-width: 0;
   flex: 1;
   padding-right: 6px;
   overflow-y: auto;
@@ -245,10 +247,32 @@
   border-radius: 999px;
   background: var(--color-gray-300);
 }
+
+@media (min-width: 1001px) and (max-width: 1400px) {
+  .sales-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-toolbar .pos-product-filters__search {
+    grid-column: 1 / -1;
+  }
+
+  .sales-invoice-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .sales-invoice-row {
+    min-height: 150px;
+    padding: 15px;
+  }
+}
+
 .sales-invoice-row {
   position: relative;
   display: flex;
   flex-direction: column;
+  height: max-content;
   gap: 12px;
   width: 100%;
   min-height: 160px;
@@ -364,12 +388,18 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .sales-invoice-row__total {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   color: var(--color-primary);
   font-size: 0.96rem;
   font-weight: 800;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 .sales-invoice-row__arrow {
   width: 16px;
@@ -452,8 +482,11 @@
 }
 .sales-invoice-paper {
   position: relative;
+  display: flex;
   width: min(100%, 460px);
   max-height: calc(100vh - 48px);
+  min-height: 0;
+  flex-direction: column;
   padding: 30px 26px 58px;
   overflow: hidden;
   background: var(--color-surface);
@@ -651,10 +684,11 @@
 }
 .sales-invoice-paper__items {
   display: grid;
-  max-height: 280px;
+  min-height: 0;
+  flex: 1 1 auto;
   gap: 12px;
   padding: 7px 8px 15px 0;
-  overflow-y: scroll;
+  overflow-y: auto;
   border-bottom: 1px dashed var(--color-gray-300);
   scrollbar-color: var(--color-gray-300) transparent;
   scrollbar-width: thin;
@@ -711,11 +745,13 @@
   font-size: 0.8rem;
 }
 .sales-invoice-paper__item > div {
+  flex: 1 1 auto;
   min-width: 0;
 }
 .sales-invoice-paper__item strong {
   color: var(--color-gray-700);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .sales-invoice-paper__item > strong {
   flex: 0 0 auto;

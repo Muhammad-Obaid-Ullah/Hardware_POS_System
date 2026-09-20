@@ -42,6 +42,13 @@
   margin: 0;
 }
 
+@media (max-width: 1200px) {
+  .screen-panel {
+    height: auto;
+    min-height: auto;
+  }
+}
+
 @media (max-width: 900px) {
   .screen-panel {
     min-height: auto;

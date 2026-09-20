@@ -21,6 +21,12 @@
   overflow: hidden;
 }
 
+@media (max-width: 1200px) {
+  .app-main--pos {
+    overflow: auto;
+  }
+}
+
 .page-transition-wrapper {
   min-height: 100vh;
 }

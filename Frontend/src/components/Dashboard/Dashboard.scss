@@ -30,6 +30,7 @@
 
 .dashboard-section {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 20px;
 }
@@ -259,6 +260,7 @@
 
 .dashboard-section__cards {
   display: grid;
+  min-width: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
@@ -277,6 +279,7 @@
 
 .dashboard-card {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 10px;
   padding: 20px;
@@ -370,6 +373,7 @@
 
 .stock-info {
   display: flex;
+  min-width: 0;
   width: 100%;
   flex-direction: column;
   gap: 16px;
@@ -397,6 +401,7 @@
 .stock-info__table {
   display: grid;
   gap: 8px;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
@@ -549,11 +554,126 @@
   text-align: center;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1001px) and (max-width: 1850px) {
+  .dashboard-section__cards--triple {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-card--companies {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .dashboard-card--payment-methods {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (min-width: 1001px) and (max-width: 1400px) {
+  .dashboard-section__header--sales {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .dashboard-section__date-filters {
+    justify-self: start;
+    max-width: 620px;
+  }
+
+  .dashboard-section__cards--metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-section__cards--charts {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-section__cards--triple {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-card--companies,
+  .dashboard-card--payment-methods {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (min-width: 1001px) and (max-width: 1100px) {
+  .dashboard-section__cards--metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
   .dashboard-section__cards--metrics,
   .dashboard-section__cards--charts,
   .dashboard-section__cards--triple {
     grid-template-columns: 1fr;
+  }
+
+  .stock-info {
+    padding: 16px;
+  }
+
+  .stock-info__table {
+    gap: 6px;
+  }
+
+  .stock-info__row--header {
+    display: none;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    gap: 8px 12px;
+    padding: 12px;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) > span:first-child {
+    grid-column: 1 / -1;
+    color: var(--color-text-dark);
+    font-weight: 700;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) > span:nth-child(2) {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) > span:nth-child(3)::before {
+    content: "Stock: ";
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) > span:nth-child(4)::before {
+    content: "Threshold: ";
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  .stock-info__row:not(.stock-info__row--header) > span:nth-child(5) {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    align-self: center;
+  }
+
+  .stock-info__indicator {
+    min-width: 0;
+  }
+
+  .stock-info__pagination {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stock-info__results {
+    position: static;
+    width: 100%;
+    text-align: center;
   }
 
   .dashboard-chart {

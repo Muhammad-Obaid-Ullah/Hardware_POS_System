@@ -613,11 +613,11 @@ function Dashboard({
             <p className="dashboard-card__label">Top Categories</p>
             <div className="dashboard-chart" ref={topCategoriesRef} />
           </div>
-          <div className="dashboard-card dashboard-card--chart">
+          <div className="dashboard-card dashboard-card--chart dashboard-card--payment-methods">
             <p className="dashboard-card__label">Payment Methods</p>
             <div className="dashboard-chart" ref={paymentMethodsRef} />
           </div>
-          <div className="dashboard-card dashboard-card--chart">
+          <div className="dashboard-card dashboard-card--chart dashboard-card--companies">
             <p className="dashboard-card__label">Top Companies</p>
             <div className="dashboard-chart" ref={topCompaniesRef} />
           </div>
