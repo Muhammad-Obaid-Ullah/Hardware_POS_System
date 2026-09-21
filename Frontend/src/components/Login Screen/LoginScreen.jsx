@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CiSliderVertical, CiDollar } from "react-icons/ci";
 import { HiOutlineLogin } from "react-icons/hi";
+import posIllustration from "../../assets/POS.jpg";
 import "./LoginScreen.scss";
 
 function LoginScreen({ values, onChange, onSubmit, loading }) {
@@ -114,7 +115,7 @@ function LoginScreen({ values, onChange, onSubmit, loading }) {
           <aside className="login-visual">
             <div className="curved-frame">
               <img
-                src="/src/assets/POS.jpg"
+                src={posIllustration}
                 alt="POS illustration"
                 className="visual-image"
               />
