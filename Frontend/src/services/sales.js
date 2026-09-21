@@ -1,3 +1,5 @@
+import { buildApiUrl } from "./api";
+
 function normalizeSale(sale) {
   const createdAt = sale.createdAt;
   const dateValue = new Date(createdAt);
@@ -27,7 +29,7 @@ function normalizeSale(sale) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`/api/sales${path}`, {
+  const response = await fetch(buildApiUrl(`/api/sales${path}`), {
     ...options,
     credentials: "include",
     headers: {

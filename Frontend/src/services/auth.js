@@ -1,5 +1,7 @@
+import { buildApiUrl } from "./api";
+
 export async function loginUser(credentials) {
-  const response = await fetch("/api/auth/login", {
+  const response = await fetch(buildApiUrl("/api/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -15,7 +17,7 @@ export async function loginUser(credentials) {
 }
 
 export async function getCurrentUser() {
-  const response = await fetch("/api/auth/session", {
+  const response = await fetch(buildApiUrl("/api/auth/session"), {
     credentials: "include",
   });
 
@@ -27,7 +29,7 @@ export async function getCurrentUser() {
 }
 
 export async function logoutUser() {
-  await fetch("/api/auth/logout", {
+  await fetch(buildApiUrl("/api/auth/logout"), {
     method: "POST",
     credentials: "include",
   });

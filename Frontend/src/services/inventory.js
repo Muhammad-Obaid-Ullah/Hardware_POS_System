@@ -1,3 +1,5 @@
+import { buildApiUrl } from "./api";
+
 function normalizeItem(item) {
   return {
     ...item,
@@ -11,7 +13,7 @@ function normalizeItem(item) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`/api/inventory${path}`, {
+  const response = await fetch(buildApiUrl(`/api/inventory${path}`), {
     ...options,
     credentials: "include",
     headers: {
